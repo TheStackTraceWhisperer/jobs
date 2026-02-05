@@ -29,7 +29,7 @@
         <!-- Dependency Versions -->
         <spring-boot.version>3.4.2</spring-boot.version>
         <errorprone.version>2.24.1</errorprone.version>
-        <mssql-jdbc.version>12.6.1.jre11</mssql-jdbc.version>
+        <mssql-jdbc.version>12.10.2.jre11</mssql-jdbc.version>
         <testcontainers.version>1.19.7</testcontainers.version>
         <jacoco.version>0.8.11</jacoco.version>
     </properties>
