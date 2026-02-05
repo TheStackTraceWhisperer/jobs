@@ -6,15 +6,9 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
- * Example Saga job for order fulfillment.
- * If this job fails permanently, a refund job will be automatically enqueued.
+ * Job for order fulfillment.
  */
 public record FulfillOrderJob(UUID orderId, BigDecimal amount) implements Job {
-
-    @Override
-    public Job getCompensatingJob() {
-        return new RefundOrderJob(orderId, amount);
-    }
 
     @Override
     public String queueName() {
