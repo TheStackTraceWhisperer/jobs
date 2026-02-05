@@ -1,0 +1,69 @@
+package io.github.thestacktracewhisperer.jobs.worker.engine;
+
+import io.github.thestacktracewhisperer.jobs.common.entity.JobEntity;
+import io.github.thestacktracewhisperer.jobs.common.entity.JobRepository;
+import io.github.thestacktracewhisperer.jobs.common.entity.JobStatus;
+import io.github.thestacktracewhisperer.jobs.worker.properties.JobWorkerProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+/**
+ * Maintenance service that reaps zombie jobs (jobs stuck in PROCESSING status).
+ * Zombie jobs are reset to QUEUED status with incremented attempts.
+ */
+@Component
+@ConditionalOnProperty(prefix = "platform.jobs.worker", name = "enabled", havingValue = "true")
+public class MaintenanceService {
+
+    private static final Logger log = LoggerFactory.getLogger(MaintenanceService.class);
+
+    private final JobRepository jobRepository;
+    private final JobWorkerProperties properties;
+
+    public MaintenanceService(JobRepository jobRepository, JobWorkerProperties properties) {
+        this.jobRepository = jobRepository;
+        this.properties = properties;
+    }
+
+    /**
+     * Reaps zombie jobs that haven't updated their heartbeat.
+     * Runs on a fixed delay schedule (default: every minute).
+     */
+    @Scheduled(fixedDelayString = "${platform.jobs.worker.reaper-interval-ms:60000}")
+    @Transactional
+    public void reapZombieJobs() {
+        try {
+            LocalDateTime threshold = LocalDateTime.now()
+                .minusMinutes(properties.getZombieThresholdMinutes());
+
+            List<JobEntity> zombies = jobRepository.findZombieJobs(
+                JobStatus.PROCESSING, threshold);
+
+            if (zombies.isEmpty()) {
+                return;
+            }
+
+            log.warn("Found {} zombie jobs, resetting to QUEUED", zombies.size());
+
+            for (JobEntity zombie : zombies) {
+                zombie.setStatus(JobStatus.QUEUED);
+                zombie.setLastError("Job timed out - no heartbeat update");
+                zombie.setRunAt(LocalDateTime.now());
+                jobRepository.save(zombie);
+
+                log.info("Reset zombie job to QUEUED: id={}, lastHeartbeat={}", 
+                    zombie.getId(), zombie.getLastHeartbeat());
+            }
+
+        } catch (Exception e) {
+            log.error("Error during zombie job reaping", e);
+        }
+    }
+}
