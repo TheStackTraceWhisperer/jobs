@@ -199,10 +199,14 @@ class OrchestrationEndToEndTest {
     }
 
     private String extractRequestIdFromPayload(String jsonPayload) {
-        // Simple extraction from JSON
-        int startIdx = jsonPayload.indexOf("\"requestIdentifier\":\"") + 21;
-        int endIdx = jsonPayload.indexOf("\"", startIdx);
-        return jsonPayload.substring(startIdx, endIdx);
+        // Use ObjectMapper for robust JSON parsing
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(jsonPayload);
+            return root.get("requestIdentifier").asText();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to extract requestIdentifier from payload", e);
+        }
     }
 
     /**
