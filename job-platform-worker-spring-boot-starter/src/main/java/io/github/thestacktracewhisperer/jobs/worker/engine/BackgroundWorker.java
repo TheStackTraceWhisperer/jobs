@@ -3,7 +3,6 @@ package io.github.thestacktracewhisperer.jobs.worker.engine;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobEntity;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobRepository;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobStatus;
-import io.github.thestacktracewhisperer.jobs.common.model.SagaJob;
 import io.github.thestacktracewhisperer.jobs.producer.context.JobContextHolder;
 import io.github.thestacktracewhisperer.jobs.producer.service.JobEnqueuer;
 import io.github.thestacktracewhisperer.jobs.worker.dispatcher.JobRoutingEngine;
@@ -41,6 +40,7 @@ public class BackgroundWorker {
     private final JobWorkerProperties properties;
     private final JobEnqueuer jobEnqueuer;
     private final MeterRegistry meterRegistry;
+    private final JobClaimService jobClaimService;
     
     private Semaphore semaphore;
     private ExecutorService executorService;
@@ -48,24 +48,31 @@ public class BackgroundWorker {
     private Counter failureCounter;
     private Counter permanentFailureCounter;
     private Timer executionTimer;
+    private java.util.Set<String> supportedJobTypes;
 
     public BackgroundWorker(
             JobRepository jobRepository,
             JobRoutingEngine routingEngine,
             JobWorkerProperties properties,
             JobEnqueuer jobEnqueuer,
-            MeterRegistry meterRegistry) {
+            MeterRegistry meterRegistry,
+            JobClaimService jobClaimService) {
         this.jobRepository = jobRepository;
         this.routingEngine = routingEngine;
         this.properties = properties;
         this.jobEnqueuer = jobEnqueuer;
         this.meterRegistry = meterRegistry;
+        this.jobClaimService = jobClaimService;
     }
 
     @PostConstruct
     public void initialize() {
         this.semaphore = new Semaphore(properties.getConcurrency());
         this.executorService = Executors.newFixedThreadPool(properties.getConcurrency());
+        
+        // Discover which job types this worker can handle
+        this.supportedJobTypes = routingEngine.getRegisteredJobTypes();
+        log.info("Worker supports {} job types: {}", supportedJobTypes.size(), supportedJobTypes);
         
         // Initialize metrics
         this.successCounter = Counter.builder("jobs.completed.total")
@@ -106,20 +113,24 @@ public class BackgroundWorker {
         }
 
         try {
-            // Fetch jobs ready for processing
-            List<JobEntity> jobs = fetchJobsForProcessing(availablePermits);
+            // Delegate to service for proper transaction handling
+            List<JobEntity> claimedJobs = jobClaimService.fetchAndClaimJobs(
+                supportedJobTypes,
+                properties.getQueueName(),
+                availablePermits
+            );
             
-            if (jobs.isEmpty()) {
+            if (claimedJobs.isEmpty()) {
                 return;
             }
 
-            log.debug("Found {} jobs ready for processing", jobs.size());
+            log.debug("Claimed {} jobs for processing", claimedJobs.size());
 
-            // Process each job asynchronously
-            for (JobEntity job : jobs) {
+            // Process each claimed job asynchronously
+            for (JobEntity job : claimedJobs) {
                 if (semaphore.tryAcquire()) {
                     // Submit job to executor service for processing
-                    executorService.submit(() -> processJob(job));
+                    executorService.submit(() -> executeClaimedJob(job));
                 } else {
                     break; // No more permits available
                 }
@@ -130,39 +141,23 @@ public class BackgroundWorker {
     }
 
     /**
-     * Fetches jobs ready for processing using optimistic locking.
+     * Processes a job that has already been claimed.
      */
-    @Transactional
-    protected List<JobEntity> fetchJobsForProcessing(int limit) {
-        return jobRepository.findJobsReadyForProcessing(
-            JobStatus.QUEUED.name(),
-            properties.getQueueName(),
-            LocalDateTime.now(),
-            limit
-        );
-    }
-
-    /**
-     * Processes a single job.
-     */
-    private void processJob(JobEntity job) {
+    private void executeClaimedJob(JobEntity job) {
         Timer.Sample sample = Timer.start(meterRegistry);
         
         try {
-            // Mark job as processing
-            markJobAsProcessing(job);
-            
             // Set job context for parent-child tracking
             JobContextHolder.setCurrentJobId(job.getId());
             
-            log.info("Processing job: id={}, type={}, attempt={}", 
-                job.getId(), job.getJobType(), job.getAttempts() + 1);
+            log.info("Executing job: id={}, type={}, attempt={}", 
+                job.getId(), job.getJobType(), job.getAttempts());
 
             // Route and execute the job
             routingEngine.route(job.getJobType(), job.getPayload());
 
-            // Mark as successful
-            markJobAsSuccess(job);
+            // Delegate to service for proper transaction handling
+            jobClaimService.markJobSuccess(job.getId());
             successCounter.increment();
             
             log.info("Job completed successfully: id={}", job.getId());
@@ -171,7 +166,16 @@ public class BackgroundWorker {
             log.error("Job execution failed: id={}, type={}, error={}", 
                 job.getId(), job.getJobType(), e.getMessage(), e);
             
-            handleJobFailure(job, e);
+            // Delegate to service for proper transaction handling
+            jobClaimService.handleJobFailure(job.getId(), e.getMessage(), properties.getMaxAttempts());
+            
+            // Check if permanently failed to handle compensation
+            if (job.getAttempts() >= properties.getMaxAttempts()) {
+                permanentFailureCounter.increment();
+                handleCompensation(job);
+            } else {
+                failureCounter.increment();
+            }
             
         } finally {
             sample.stop(executionTimer);
@@ -181,84 +185,27 @@ public class BackgroundWorker {
     }
 
     /**
-     * Marks a job as processing.
+     * Handles saga compensation if needed.
      */
-    @Transactional
-    protected void markJobAsProcessing(JobEntity job) {
-        JobEntity entity = jobRepository.findById(job.getId()).orElseThrow();
-        entity.incrementAttempts();
-        entity.markAsProcessing();
-        jobRepository.save(entity);
-    }
-
-    /**
-     * Marks a job as successful.
-     */
-    @Transactional
-    protected void markJobAsSuccess(JobEntity job) {
-        JobEntity entity = jobRepository.findById(job.getId()).orElseThrow();
-        entity.markAsSuccess();
-        jobRepository.save(entity);
-    }
-
-    /**
-     * Handles job failure with retry logic.
-     */
-    @Transactional
-    protected void handleJobFailure(JobEntity job, Exception error) {
-        JobEntity entity = jobRepository.findById(job.getId()).orElseThrow();
-        
-        if (entity.getAttempts() >= properties.getMaxAttempts()) {
-            // Permanently failed
-            entity.markAsPermanentlyFailed(error.getMessage());
-            permanentFailureCounter.increment();
-            
-            log.warn("Job permanently failed after {} attempts: id={}", 
-                entity.getAttempts(), entity.getId());
-            
-            // Handle saga compensation if applicable
-            handleSagaCompensation(entity);
-            
-        } else {
-            // Temporary failure - schedule for retry with exponential backoff
-            entity.markAsFailed(error.getMessage());
-            entity.setStatus(JobStatus.QUEUED);
-            
-            // Exponential backoff: 2^attempts minutes
-            int delayMinutes = (int) Math.pow(2, entity.getAttempts());
-            entity.setRunAt(LocalDateTime.now().plusMinutes(delayMinutes));
-            
-            failureCounter.increment();
-            
-            log.info("Job will be retried in {} minutes: id={}, attempt={}", 
-                delayMinutes, entity.getId(), entity.getAttempts());
-        }
-        
-        jobRepository.save(entity);
-    }
-
-    /**
-     * Handles saga compensation by enqueuing the compensating job.
-     */
-    private void handleSagaCompensation(JobEntity failedJob) {
+    private void handleCompensation(JobEntity failedJob) {
         try {
-            // Check if this is a SagaJob
             Class<?> jobClass = Class.forName(failedJob.getJobType());
-            if (SagaJob.class.isAssignableFrom(jobClass)) {
-                log.info("Handling saga compensation for failed job: id={}", failedJob.getId());
-                
-                // Deserialize and get compensating job
-                com.fasterxml.jackson.databind.ObjectMapper mapper = 
-                    new com.fasterxml.jackson.databind.ObjectMapper();
-                SagaJob sagaJob = (SagaJob) mapper.readValue(failedJob.getPayload(), jobClass);
-                
-                // Enqueue compensating job
-                jobEnqueuer.enqueue(sagaJob.getCompensatingJob());
-                
-                log.info("Compensating job enqueued for failed saga: id={}", failedJob.getId());
+            com.fasterxml.jackson.databind.ObjectMapper mapper = 
+                new com.fasterxml.jackson.databind.ObjectMapper();
+            io.github.thestacktracewhisperer.jobs.common.model.Job job = 
+                (io.github.thestacktracewhisperer.jobs.common.model.Job) 
+                mapper.readValue(failedJob.getPayload(), jobClass);
+            
+            io.github.thestacktracewhisperer.jobs.common.model.Job compensation = 
+                job.getCompensatingJob();
+            
+            if (compensation != null) {
+                log.info("Enqueueing compensation for failed job: id={}", failedJob.getId());
+                jobEnqueuer.enqueue(compensation);
+                log.info("Compensation job enqueued for: id={}", failedJob.getId());
             }
         } catch (Exception e) {
-            log.error("Failed to enqueue compensating job for saga: id={}", 
+            log.error("Failed to enqueue compensation for job: id={}", 
                 failedJob.getId(), e);
         }
     }

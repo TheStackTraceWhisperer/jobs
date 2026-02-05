@@ -92,6 +92,16 @@ public class JobRoutingEngine {
     public JobHandler<?> getHandler(String jobType) {
         return handlerRegistry.get(jobType);
     }
+    
+    /**
+     * Returns the set of all job type class names that have registered handlers.
+     * This allows workers to filter database queries to only fetch jobs they can process.
+     * 
+     * @return immutable set of job type class names
+     */
+    public java.util.Set<String> getRegisteredJobTypes() {
+        return java.util.Collections.unmodifiableSet(handlerRegistry.keySet());
+    }
 
     /**
      * Extracts the job type from a handler using reflection.
