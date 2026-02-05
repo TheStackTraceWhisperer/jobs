@@ -163,7 +163,7 @@ public class BackgroundWorker {
         List<JobEntity> claimed = new java.util.ArrayList<>();
         for (JobEntity candidate : candidates) {
             try {
-                // Re-check state since lock may have been released
+                // Verify current state before claiming
                 JobEntity current = jobRepository.findById(candidate.getId()).orElse(null);
                     
                 if (current != null && current.getStatus() == JobStatus.QUEUED) {
