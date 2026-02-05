@@ -11,7 +11,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -40,8 +41,8 @@ public class MaintenanceService {
     @Transactional
     public void reapZombieJobs() {
         try {
-            LocalDateTime threshold = LocalDateTime.now()
-                .minusMinutes(properties.getZombieThresholdMinutes());
+            Instant threshold = Instant.now()
+                .minus(Duration.ofMinutes(properties.getZombieThresholdMinutes()));
 
             List<JobEntity> zombies = jobRepository.findZombieJobs(
                 JobStatus.PROCESSING, threshold);
@@ -55,7 +56,7 @@ public class MaintenanceService {
             for (JobEntity zombie : zombies) {
                 zombie.setStatus(JobStatus.QUEUED);
                 zombie.setLastError("Job timed out - no heartbeat update");
-                zombie.setRunAt(LocalDateTime.now());
+                zombie.setRunAt(Instant.now());
                 jobRepository.save(zombie);
 
                 log.info("Reset zombie job to QUEUED: id={}, lastHeartbeat={}", 

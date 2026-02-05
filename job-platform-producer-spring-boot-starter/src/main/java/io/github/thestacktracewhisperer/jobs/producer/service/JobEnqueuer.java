@@ -12,7 +12,7 @@ import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -52,7 +52,7 @@ public class JobEnqueuer {
      * @return the persisted job entity
      */
     @Transactional
-    public JobEntity enqueue(Job job, LocalDateTime runAt) {
+    public JobEntity enqueue(Job job, Instant runAt) {
         try {
             // Serialize job to JSON
             String payload = objectMapper.writeValueAsString(job);

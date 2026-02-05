@@ -2,7 +2,7 @@ package io.github.thestacktracewhisperer.jobs.common.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -41,10 +41,10 @@ public class JobEntity {
 
     @NotNull
     @Column(name = "run_at", nullable = false)
-    private LocalDateTime runAt = LocalDateTime.now();
+    private Instant runAt = Instant.now();
 
     @Column(name = "last_heartbeat")
-    private LocalDateTime lastHeartbeat;
+    private Instant lastHeartbeat;
 
     @Version
     @Column(name = "version", nullable = false)
@@ -57,7 +57,7 @@ public class JobEntity {
     private UUID parentJobId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 
     @Column(name = "last_error", columnDefinition = "NVARCHAR(MAX)")
     private String lastError;
@@ -70,8 +70,8 @@ public class JobEntity {
         this.queueName = queueName;
         this.jobType = jobType;
         this.payload = payload;
-        this.createdAt = LocalDateTime.now();
-        this.runAt = LocalDateTime.now();
+        this.createdAt = Instant.now();
+        this.runAt = Instant.now();
     }
 
     // Getters and Setters
@@ -123,19 +123,19 @@ public class JobEntity {
         this.attempts = attempts;
     }
 
-    public LocalDateTime getRunAt() {
+    public Instant getRunAt() {
         return runAt;
     }
 
-    public void setRunAt(LocalDateTime runAt) {
+    public void setRunAt(Instant runAt) {
         this.runAt = runAt;
     }
 
-    public LocalDateTime getLastHeartbeat() {
+    public Instant getLastHeartbeat() {
         return lastHeartbeat;
     }
 
-    public void setLastHeartbeat(LocalDateTime lastHeartbeat) {
+    public void setLastHeartbeat(Instant lastHeartbeat) {
         this.lastHeartbeat = lastHeartbeat;
     }
 
@@ -163,11 +163,11 @@ public class JobEntity {
         this.parentJobId = parentJobId;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
@@ -182,10 +182,10 @@ public class JobEntity {
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {
-            createdAt = LocalDateTime.now();
+            createdAt = Instant.now();
         }
         if (runAt == null) {
-            runAt = LocalDateTime.now();
+            runAt = Instant.now();
         }
     }
 
@@ -195,7 +195,7 @@ public class JobEntity {
 
     public void markAsProcessing() {
         this.status = JobStatus.PROCESSING;
-        this.lastHeartbeat = LocalDateTime.now();
+        this.lastHeartbeat = Instant.now();
     }
 
     public void markAsSuccess() {
