@@ -22,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 
 /**
@@ -41,6 +43,7 @@ public class BackgroundWorker {
     private final MeterRegistry meterRegistry;
     
     private Semaphore semaphore;
+    private ExecutorService executorService;
     private Counter successCounter;
     private Counter failureCounter;
     private Counter permanentFailureCounter;
@@ -62,6 +65,7 @@ public class BackgroundWorker {
     @PostConstruct
     public void initialize() {
         this.semaphore = new Semaphore(properties.getConcurrency());
+        this.executorService = Executors.newFixedThreadPool(properties.getConcurrency());
         
         // Initialize metrics
         this.successCounter = Counter.builder("jobs.completed.total")
@@ -114,8 +118,8 @@ public class BackgroundWorker {
             // Process each job asynchronously
             for (JobEntity job : jobs) {
                 if (semaphore.tryAcquire()) {
-                    // Process in a separate thread to avoid blocking the scheduler
-                    new Thread(() -> processJob(job)).start();
+                    // Submit job to executor service for processing
+                    executorService.submit(() -> processJob(job));
                 } else {
                     break; // No more permits available
                 }

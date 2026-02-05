@@ -78,7 +78,7 @@ public class JobRoutingEngine {
             
         } catch (ClassNotFoundException e) {
             throw new JobSerializationException("Job class not found: " + jobType, e);
-        } catch (Exception e) {
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             throw new JobSerializationException("Failed to deserialize job: " + jobType, e);
         }
     }

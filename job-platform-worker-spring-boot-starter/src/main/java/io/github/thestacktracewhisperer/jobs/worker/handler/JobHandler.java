@@ -17,17 +17,4 @@ public interface JobHandler<T extends Job> {
      * @throws Exception if job execution fails
      */
     void handle(T job) throws Exception;
-
-    /**
-     * Returns the type of job this handler processes.
-     * 
-     * @return the job class
-     */
-    @SuppressWarnings("unchecked")
-    default Class<T> getJobType() {
-        // Use reflection to determine the generic type
-        return (Class<T>) ((java.lang.reflect.ParameterizedType) 
-            getClass().getGenericInterfaces()[0])
-            .getActualTypeArguments()[0];
-    }
 }
