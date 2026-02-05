@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,7 +38,7 @@ public interface JobRepository extends JpaRepository<JobEntity, UUID> {
     org.springframework.data.domain.Page<JobEntity> findJobsReadyForProcessing(
         @Param("status") JobStatus status,
         @Param("queueName") String queueName,
-        @Param("runAt") LocalDateTime runAt,
+        @Param("runAt") Instant runAt,
         @Param("supportedTypes") java.util.Collection<String> supportedTypes,
         org.springframework.data.domain.Pageable pageable
     );
@@ -59,7 +59,7 @@ public interface JobRepository extends JpaRepository<JobEntity, UUID> {
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     List<JobEntity> findZombieJobs(
         @Param("status") JobStatus status,
-        @Param("heartbeatThreshold") LocalDateTime heartbeatThreshold
+        @Param("heartbeatThreshold") Instant heartbeatThreshold
     );
 
     /**
