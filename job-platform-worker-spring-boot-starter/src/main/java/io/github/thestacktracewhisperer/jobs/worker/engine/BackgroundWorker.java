@@ -47,6 +47,7 @@ public class BackgroundWorker {
     private Counter failureCounter;
     private Counter permanentFailureCounter;
     private Timer executionTimer;
+    private java.util.Set<String> supportedJobTypes;
 
     public BackgroundWorker(
             JobRepository jobRepository,
@@ -65,6 +66,10 @@ public class BackgroundWorker {
     public void initialize() {
         this.semaphore = new Semaphore(properties.getConcurrency());
         this.executorService = Executors.newFixedThreadPool(properties.getConcurrency());
+        
+        // Discover which job types this worker can handle
+        this.supportedJobTypes = routingEngine.getRegisteredJobTypes();
+        log.info("Worker supports {} job types: {}", supportedJobTypes.size(), supportedJobTypes);
         
         // Initialize metrics
         this.successCounter = Counter.builder("jobs.completed.total")
@@ -130,42 +135,49 @@ public class BackgroundWorker {
 
     /**
      * Atomically fetches and claims jobs to prevent race conditions between workers.
-     * This method combines fetch + update in a single transaction to ensure
-     * no two workers can claim the same job.
+     * Only fetches jobs for which this worker has registered handlers.
      */
     @Transactional
-    protected List<JobEntity> claimJobsAtomically(int limit) {
-        // First, find candidate jobs
-        List<JobEntity> candidates = jobRepository.findJobsReadyForProcessing(
-            JobStatus.QUEUED.name(),
-            properties.getQueueName(),
-            LocalDateTime.now(),
-            limit
-        );
+    protected List<JobEntity> claimJobsAtomically(int batchSize) {
+        if (supportedJobTypes.isEmpty()) {
+            log.warn("No job handlers registered, skipping poll");
+            return java.util.Collections.emptyList();
+        }
         
-        // Now atomically claim them by updating status and incrementing version
-        // The @Version field will prevent concurrent modifications
-        List<JobEntity> claimedJobs = new java.util.ArrayList<>();
+        // Query with pessimistic lock and job type filter
+        org.springframework.data.domain.Pageable pageRequest = 
+            org.springframework.data.domain.PageRequest.of(0, batchSize);
+            
+        org.springframework.data.domain.Page<JobEntity> candidatePage = 
+            jobRepository.findJobsReadyForProcessing(
+                JobStatus.QUEUED,
+                properties.getQueueName(),
+                LocalDateTime.now(),
+                supportedJobTypes,
+                pageRequest
+            );
+        
+        List<JobEntity> candidates = candidatePage.getContent();
+        
+        // Atomically claim by updating status
+        List<JobEntity> claimed = new java.util.ArrayList<>();
         for (JobEntity candidate : candidates) {
             try {
-                // Re-fetch with current state to get latest version
-                JobEntity fresh = jobRepository.findById(candidate.getId())
-                    .orElse(null);
+                // Re-check state since lock may have been released
+                JobEntity current = jobRepository.findById(candidate.getId()).orElse(null);
                     
-                // Only claim if still in QUEUED state
-                if (fresh != null && fresh.getStatus() == JobStatus.QUEUED) {
-                    fresh.incrementAttempts();
-                    fresh.markAsProcessing();
-                    jobRepository.saveAndFlush(fresh);  // Flush immediately to detect conflicts
-                    claimedJobs.add(fresh);
+                if (current != null && current.getStatus() == JobStatus.QUEUED) {
+                    current.incrementAttempts();
+                    current.markAsProcessing();
+                    jobRepository.saveAndFlush(current);
+                    claimed.add(current);
                 }
-            } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
-                // Another worker claimed this job - skip it
+            } catch (org.springframework.orm.ObjectOptimisticLockingFailureException ex) {
                 log.debug("Job {} already claimed by another worker", candidate.getId());
             }
         }
         
-        return claimedJobs;
+        return claimed;
     }
 
     /**

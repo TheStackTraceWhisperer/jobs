@@ -16,28 +16,31 @@ import java.util.UUID;
 public interface JobRepository extends JpaRepository<JobEntity, UUID> {
 
     /**
-     * Find jobs that are ready to be processed with pessimistic write lock.
-     * Uses database-level row locking to prevent concurrent workers from claiming the same job.
+     * Find jobs ready for processing with pessimistic locking.
+     * Filters by queue, status, scheduled time and supported job types.
      * 
      * @param status the job status to filter by
      * @param queueName the queue name to filter by
      * @param runAt the maximum run_at time
-     * @param limit the maximum number of jobs to return
-     * @return list of jobs ready for processing with exclusive locks
+     * @param supportedTypes list of job type class names this worker can process
+     * @param pageable pagination settings for batch size
+     * @return page of jobs ready for processing with exclusive locks
      */
-    @Query(value = """
-        SELECT TOP (:limit) *
-        FROM background_jobs WITH (UPDLOCK, READPAST)
-        WHERE status = :status
-          AND queue_name = :queueName
-          AND run_at <= :runAt
-        ORDER BY run_at ASC
-        """, nativeQuery = true)
-    List<JobEntity> findJobsReadyForProcessing(
-        @Param("status") String status,
+    @Query("""
+        SELECT j FROM JobEntity j
+        WHERE j.status = :status
+          AND j.queueName = :queueName
+          AND j.runAt <= :runAt
+          AND j.jobType IN :supportedTypes
+        ORDER BY j.runAt ASC
+        """)
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    org.springframework.data.domain.Page<JobEntity> findJobsReadyForProcessing(
+        @Param("status") JobStatus status,
         @Param("queueName") String queueName,
         @Param("runAt") LocalDateTime runAt,
-        @Param("limit") int limit
+        @Param("supportedTypes") java.util.Collection<String> supportedTypes,
+        org.springframework.data.domain.Pageable pageable
     );
 
     /**
