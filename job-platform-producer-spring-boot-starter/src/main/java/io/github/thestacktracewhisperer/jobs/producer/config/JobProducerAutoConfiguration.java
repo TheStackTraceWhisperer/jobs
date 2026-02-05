@@ -2,6 +2,7 @@ package io.github.thestacktracewhisperer.jobs.producer.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.github.thestacktracewhisperer.jobs.common.annotation.PlatformJsonSerializer;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobRepository;
 import io.github.thestacktracewhisperer.jobs.producer.service.JobEnqueuer;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -20,6 +21,7 @@ public class JobProducerAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    @PlatformJsonSerializer
     public ObjectMapper jobObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
@@ -28,7 +30,7 @@ public class JobProducerAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public JobEnqueuer jobEnqueuer(JobRepository jobRepository, ObjectMapper objectMapper) {
+    public JobEnqueuer jobEnqueuer(JobRepository jobRepository, @PlatformJsonSerializer ObjectMapper objectMapper) {
         return new JobEnqueuer(jobRepository, objectMapper);
     }
 }
