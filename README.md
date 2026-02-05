@@ -6,11 +6,12 @@ A high-performance, FOSS (Free and Open Source Software) distributed background 
 
 - **Transactional Integrity**: Job enqueueing is atomic with business logic (Outbox Pattern)
 - **Polymorphic Deployment**: Single codebase can act as API Node or Worker Node via Spring Profiles
-- **Zero-Dependency Logic**: Business logic decoupled from execution engine via Sealed Interfaces
+- **Zero-Dependency Logic**: Business logic decoupled from execution engine
 - **Resiliency**: Built-in exponential backoff, dead-letter queuing (DLQ), and zombie reaping
-- **Saga Pattern**: Automatic compensation for failed transactions
+- **Saga Pattern**: Automatic compensation for failed transactions via getCompensatingJob()
 - **Fan-Out Pattern**: Distribute work across multiple child jobs
 - **Observability**: Prometheus metrics via Micrometer
+- **Race-Free**: Pessimistic locking prevents duplicate job processing
 
 ## Architecture
 
@@ -109,17 +110,17 @@ public class JobController {
 ### Saga Pattern (Order Fulfillment with Compensation)
 
 ```java
-// The Job
-public record FulfillOrderJob(UUID orderId, BigDecimal amount) implements SagaJob {
+// The Job - implements Job interface with compensation
+public record FulfillOrderJob(UUID orderId, BigDecimal amount) implements Job {
     @Override
     public Job getCompensatingJob() {
         return new RefundOrderJob(orderId, amount);
     }
 }
 
-// The Handler
+// The Handler - standard JobHandler
 @Component
-public class FulfillOrderHandler implements SagaHandler<FulfillOrderJob> {
+public class FulfillOrderHandler implements JobHandler<FulfillOrderJob> {
     private final InventoryService inventory;
     
     @Override

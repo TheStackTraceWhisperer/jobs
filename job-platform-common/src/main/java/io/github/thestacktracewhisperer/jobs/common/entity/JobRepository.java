@@ -16,17 +16,18 @@ import java.util.UUID;
 public interface JobRepository extends JpaRepository<JobEntity, UUID> {
 
     /**
-     * Find jobs that are ready to be processed.
+     * Find jobs that are ready to be processed with pessimistic write lock.
+     * Uses database-level row locking to prevent concurrent workers from claiming the same job.
      * 
      * @param status the job status to filter by
      * @param queueName the queue name to filter by
      * @param runAt the maximum run_at time
      * @param limit the maximum number of jobs to return
-     * @return list of jobs ready for processing
+     * @return list of jobs ready for processing with exclusive locks
      */
     @Query(value = """
         SELECT TOP (:limit) *
-        FROM background_jobs
+        FROM background_jobs WITH (UPDLOCK, READPAST)
         WHERE status = :status
           AND queue_name = :queueName
           AND run_at <= :runAt
@@ -41,16 +42,18 @@ public interface JobRepository extends JpaRepository<JobEntity, UUID> {
 
     /**
      * Find zombie jobs (jobs stuck in PROCESSING status without heartbeat updates).
+     * Uses pessimistic lock to prevent race with active workers.
      * 
      * @param status the job status (should be PROCESSING)
      * @param heartbeatThreshold the threshold before which jobs are considered zombies
-     * @return list of zombie jobs
+     * @return list of zombie jobs with exclusive locks
      */
     @Query("""
         SELECT j FROM JobEntity j
         WHERE j.status = :status
           AND (j.lastHeartbeat IS NULL OR j.lastHeartbeat < :heartbeatThreshold)
         """)
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     List<JobEntity> findZombieJobs(
         @Param("status") JobStatus status,
         @Param("heartbeatThreshold") LocalDateTime heartbeatThreshold
