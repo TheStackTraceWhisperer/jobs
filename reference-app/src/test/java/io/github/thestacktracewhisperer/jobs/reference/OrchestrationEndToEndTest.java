@@ -5,6 +5,7 @@ import io.github.thestacktracewhisperer.jobs.common.entity.JobRepository;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobStatus;
 import io.github.thestacktracewhisperer.jobs.common.model.Job;
 import io.github.thestacktracewhisperer.jobs.producer.service.JobEnqueuer;
+import io.github.thestacktracewhisperer.jobs.reference.config.TestObjectMapperConfig;
 import io.github.thestacktracewhisperer.jobs.worker.dispatcher.JobRoutingEngine;
 import io.github.thestacktracewhisperer.jobs.worker.handler.JobHandler;
 import org.junit.jupiter.api.*;
@@ -31,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest
 @ActiveProfiles("orchestration")
-@Import(OrchestrationEndToEndTest.TestOrchestrationConfig.class)
+@Import({OrchestrationEndToEndTest.TestOrchestrationConfig.class, TestObjectMapperConfig.class})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class OrchestrationEndToEndTest {
 
@@ -236,18 +237,6 @@ class OrchestrationEndToEndTest {
         public OrchestratedTaskHandler orchestratedTaskHandler() {
             return new OrchestratedTaskHandler();
         }
-        
-        @Bean
-        public com.fasterxml.jackson.databind.Module testJobModule() {
-            com.fasterxml.jackson.databind.module.SimpleModule module = 
-                new com.fasterxml.jackson.databind.module.SimpleModule();
-            module.setMixInAnnotation(OrchestratedTask.class, IgnoreUnknownMixin.class);
-            return module;
-        }
-    }
-    
-    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
-    interface IgnoreUnknownMixin {
     }
 
     /**
