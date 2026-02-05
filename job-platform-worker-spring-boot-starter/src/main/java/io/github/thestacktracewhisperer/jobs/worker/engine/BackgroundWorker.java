@@ -3,7 +3,6 @@ package io.github.thestacktracewhisperer.jobs.worker.engine;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobEntity;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobRepository;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobStatus;
-import io.github.thestacktracewhisperer.jobs.common.model.SagaJob;
 import io.github.thestacktracewhisperer.jobs.producer.context.JobContextHolder;
 import io.github.thestacktracewhisperer.jobs.producer.service.JobEnqueuer;
 import io.github.thestacktracewhisperer.jobs.worker.dispatcher.JobRoutingEngine;
@@ -106,20 +105,20 @@ public class BackgroundWorker {
         }
 
         try {
-            // Fetch jobs ready for processing
-            List<JobEntity> jobs = fetchJobsForProcessing(availablePermits);
+            // Fetch and claim jobs atomically to prevent race conditions
+            List<JobEntity> claimedJobs = claimJobsAtomically(availablePermits);
             
-            if (jobs.isEmpty()) {
+            if (claimedJobs.isEmpty()) {
                 return;
             }
 
-            log.debug("Found {} jobs ready for processing", jobs.size());
+            log.debug("Claimed {} jobs for processing", claimedJobs.size());
 
-            // Process each job asynchronously
-            for (JobEntity job : jobs) {
+            // Process each claimed job asynchronously
+            for (JobEntity job : claimedJobs) {
                 if (semaphore.tryAcquire()) {
                     // Submit job to executor service for processing
-                    executorService.submit(() -> processJob(job));
+                    executorService.submit(() -> executeClaimedJob(job));
                 } else {
                     break; // No more permits available
                 }
@@ -130,39 +129,63 @@ public class BackgroundWorker {
     }
 
     /**
-     * Fetches jobs ready for processing using optimistic locking.
+     * Atomically fetches and claims jobs to prevent race conditions between workers.
+     * This method combines fetch + update in a single transaction to ensure
+     * no two workers can claim the same job.
      */
     @Transactional
-    protected List<JobEntity> fetchJobsForProcessing(int limit) {
-        return jobRepository.findJobsReadyForProcessing(
+    protected List<JobEntity> claimJobsAtomically(int limit) {
+        // First, find candidate jobs
+        List<JobEntity> candidates = jobRepository.findJobsReadyForProcessing(
             JobStatus.QUEUED.name(),
             properties.getQueueName(),
             LocalDateTime.now(),
             limit
         );
+        
+        // Now atomically claim them by updating status and incrementing version
+        // The @Version field will prevent concurrent modifications
+        List<JobEntity> claimedJobs = new java.util.ArrayList<>();
+        for (JobEntity candidate : candidates) {
+            try {
+                // Re-fetch with current state to get latest version
+                JobEntity fresh = jobRepository.findById(candidate.getId())
+                    .orElse(null);
+                    
+                // Only claim if still in QUEUED state
+                if (fresh != null && fresh.getStatus() == JobStatus.QUEUED) {
+                    fresh.incrementAttempts();
+                    fresh.markAsProcessing();
+                    jobRepository.saveAndFlush(fresh);  // Flush immediately to detect conflicts
+                    claimedJobs.add(fresh);
+                }
+            } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
+                // Another worker claimed this job - skip it
+                log.debug("Job {} already claimed by another worker", candidate.getId());
+            }
+        }
+        
+        return claimedJobs;
     }
 
     /**
-     * Processes a single job.
+     * Processes a job that has already been claimed.
      */
-    private void processJob(JobEntity job) {
+    private void executeClaimedJob(JobEntity job) {
         Timer.Sample sample = Timer.start(meterRegistry);
         
         try {
-            // Mark job as processing
-            markJobAsProcessing(job);
-            
             // Set job context for parent-child tracking
             JobContextHolder.setCurrentJobId(job.getId());
             
-            log.info("Processing job: id={}, type={}, attempt={}", 
-                job.getId(), job.getJobType(), job.getAttempts() + 1);
+            log.info("Executing job: id={}, type={}, attempt={}", 
+                job.getId(), job.getJobType(), job.getAttempts());
 
             // Route and execute the job
             routingEngine.route(job.getJobType(), job.getPayload());
 
             // Mark as successful
-            markJobAsSuccess(job);
+            markAsSuccessful(job);
             successCounter.increment();
             
             log.info("Job completed successfully: id={}", job.getId());
@@ -171,7 +194,7 @@ public class BackgroundWorker {
             log.error("Job execution failed: id={}, type={}, error={}", 
                 job.getId(), job.getJobType(), e.getMessage(), e);
             
-            handleJobFailure(job, e);
+            retryOrFailJob(job, e);
             
         } finally {
             sample.stop(executionTimer);
@@ -181,84 +204,87 @@ public class BackgroundWorker {
     }
 
     /**
-     * Marks a job as processing.
-     */
-    @Transactional
-    protected void markJobAsProcessing(JobEntity job) {
-        JobEntity entity = jobRepository.findById(job.getId()).orElseThrow();
-        entity.incrementAttempts();
-        entity.markAsProcessing();
-        jobRepository.save(entity);
-    }
-
-    /**
      * Marks a job as successful.
      */
     @Transactional
-    protected void markJobAsSuccess(JobEntity job) {
-        JobEntity entity = jobRepository.findById(job.getId()).orElseThrow();
-        entity.markAsSuccess();
-        jobRepository.save(entity);
+    protected void markAsSuccessful(JobEntity job) {
+        try {
+            JobEntity current = jobRepository.findById(job.getId()).orElseThrow();
+            current.markAsSuccess();
+            jobRepository.save(current);
+        } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
+            // Version conflict - job may have been modified by zombie reaper
+            log.warn("Version conflict when marking job as success: id={}", job.getId());
+            throw e;
+        }
     }
 
     /**
-     * Handles job failure with retry logic.
+     * Handles job failure with retry logic and saga compensation.
      */
     @Transactional
-    protected void handleJobFailure(JobEntity job, Exception error) {
-        JobEntity entity = jobRepository.findById(job.getId()).orElseThrow();
-        
-        if (entity.getAttempts() >= properties.getMaxAttempts()) {
-            // Permanently failed
-            entity.markAsPermanentlyFailed(error.getMessage());
-            permanentFailureCounter.increment();
+    protected void retryOrFailJob(JobEntity job, Exception error) {
+        try {
+            JobEntity current = jobRepository.findById(job.getId()).orElseThrow();
             
-            log.warn("Job permanently failed after {} attempts: id={}", 
-                entity.getAttempts(), entity.getId());
+            if (current.getAttempts() >= properties.getMaxAttempts()) {
+                // Permanently failed
+                current.markAsPermanentlyFailed(error.getMessage());
+                permanentFailureCounter.increment();
+                
+                log.warn("Job permanently failed after {} attempts: id={}", 
+                    current.getAttempts(), current.getId());
+                
+                // Handle saga compensation if applicable
+                enqueueCompensationIfNeeded(current);
+                
+            } else {
+                // Temporary failure - schedule for retry with exponential backoff
+                current.markAsFailed(error.getMessage());
+                current.setStatus(JobStatus.QUEUED);
+                
+                // Exponential backoff: 2^attempts minutes
+                int delayMinutes = (int) Math.pow(2, current.getAttempts());
+                current.setRunAt(LocalDateTime.now().plusMinutes(delayMinutes));
+                
+                failureCounter.increment();
+                
+                log.info("Job will be retried in {} minutes: id={}, attempt={}", 
+                    delayMinutes, current.getId(), current.getAttempts());
+            }
             
-            // Handle saga compensation if applicable
-            handleSagaCompensation(entity);
-            
-        } else {
-            // Temporary failure - schedule for retry with exponential backoff
-            entity.markAsFailed(error.getMessage());
-            entity.setStatus(JobStatus.QUEUED);
-            
-            // Exponential backoff: 2^attempts minutes
-            int delayMinutes = (int) Math.pow(2, entity.getAttempts());
-            entity.setRunAt(LocalDateTime.now().plusMinutes(delayMinutes));
-            
-            failureCounter.increment();
-            
-            log.info("Job will be retried in {} minutes: id={}, attempt={}", 
-                delayMinutes, entity.getId(), entity.getAttempts());
+            jobRepository.save(current);
+        } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
+            // Version conflict - retry the failure handling
+            log.warn("Version conflict during failure handling for job: id={}", job.getId());
+            throw e;
         }
-        
-        jobRepository.save(entity);
     }
 
     /**
-     * Handles saga compensation by enqueuing the compensating job.
+     * Enqueues compensation job if the failed job has one defined.
      */
-    private void handleSagaCompensation(JobEntity failedJob) {
+    private void enqueueCompensationIfNeeded(JobEntity failedJob) {
         try {
-            // Check if this is a SagaJob
+            // Deserialize the job to check for compensation
             Class<?> jobClass = Class.forName(failedJob.getJobType());
-            if (SagaJob.class.isAssignableFrom(jobClass)) {
-                log.info("Handling saga compensation for failed job: id={}", failedJob.getId());
-                
-                // Deserialize and get compensating job
-                com.fasterxml.jackson.databind.ObjectMapper mapper = 
-                    new com.fasterxml.jackson.databind.ObjectMapper();
-                SagaJob sagaJob = (SagaJob) mapper.readValue(failedJob.getPayload(), jobClass);
-                
-                // Enqueue compensating job
-                jobEnqueuer.enqueue(sagaJob.getCompensatingJob());
-                
-                log.info("Compensating job enqueued for failed saga: id={}", failedJob.getId());
+            com.fasterxml.jackson.databind.ObjectMapper mapper = 
+                new com.fasterxml.jackson.databind.ObjectMapper();
+            io.github.thestacktracewhisperer.jobs.common.model.Job job = 
+                (io.github.thestacktracewhisperer.jobs.common.model.Job) 
+                mapper.readValue(failedJob.getPayload(), jobClass);
+            
+            // Check if compensation is needed
+            io.github.thestacktracewhisperer.jobs.common.model.Job compensation = 
+                job.getCompensatingJob();
+            
+            if (compensation != null) {
+                log.info("Enqueueing compensation for failed job: id={}", failedJob.getId());
+                jobEnqueuer.enqueue(compensation);
+                log.info("Compensation job enqueued for: id={}", failedJob.getId());
             }
         } catch (Exception e) {
-            log.error("Failed to enqueue compensating job for saga: id={}", 
+            log.error("Failed to enqueue compensation for job: id={}", 
                 failedJob.getId(), e);
         }
     }
