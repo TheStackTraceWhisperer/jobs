@@ -8,7 +8,6 @@ A high-performance, FOSS (Free and Open Source Software) distributed background 
 - **Polymorphic Deployment**: Single codebase can act as API Node or Worker Node via Spring Profiles
 - **Zero-Dependency Logic**: Business logic decoupled from execution engine
 - **Resiliency**: Built-in exponential backoff, dead-letter queuing (DLQ), and zombie reaping
-- **Saga Pattern**: Automatic compensation for failed transactions via getCompensatingJob()
 - **Fan-Out Pattern**: Distribute work across multiple child jobs
 - **Observability**: Prometheus metrics via Micrometer
 - **Race-Free**: Pessimistic locking prevents duplicate job processing
@@ -106,31 +105,6 @@ public class JobController {
     }
 }
 ```
-
-### Saga Pattern (Order Fulfillment with Compensation)
-
-```java
-// The Job - implements Job interface with compensation
-public record FulfillOrderJob(UUID orderId, BigDecimal amount) implements Job {
-    @Override
-    public Job getCompensatingJob() {
-        return new RefundOrderJob(orderId, amount);
-    }
-}
-
-// The Handler - standard JobHandler
-@Component
-public class FulfillOrderHandler implements JobHandler<FulfillOrderJob> {
-    private final InventoryService inventory;
-    
-    @Override
-    public void handle(FulfillOrderJob job) throws Exception {
-        inventory.reserve(job.orderId());
-    }
-}
-```
-
-If the job fails permanently, a `RefundOrderJob` is automatically enqueued.
 
 ### Fan-Out Pattern (Monthly Reports)
 

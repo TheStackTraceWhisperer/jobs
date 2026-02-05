@@ -169,10 +169,9 @@ public class BackgroundWorker {
             // Delegate to service for proper transaction handling
             jobClaimService.handleJobFailure(job.getId(), e.getMessage(), properties.getMaxAttempts());
             
-            // Check if permanently failed to handle compensation
+            // Check if permanently failed
             if (job.getAttempts() >= properties.getMaxAttempts()) {
                 permanentFailureCounter.increment();
-                handleCompensation(job);
             } else {
                 failureCounter.increment();
             }
@@ -181,32 +180,6 @@ public class BackgroundWorker {
             sample.stop(executionTimer);
             JobContextHolder.clear();
             semaphore.release();
-        }
-    }
-
-    /**
-     * Handles saga compensation if needed.
-     */
-    private void handleCompensation(JobEntity failedJob) {
-        try {
-            Class<?> jobClass = Class.forName(failedJob.getJobType());
-            com.fasterxml.jackson.databind.ObjectMapper mapper = 
-                new com.fasterxml.jackson.databind.ObjectMapper();
-            io.github.thestacktracewhisperer.jobs.common.model.Job job = 
-                (io.github.thestacktracewhisperer.jobs.common.model.Job) 
-                mapper.readValue(failedJob.getPayload(), jobClass);
-            
-            io.github.thestacktracewhisperer.jobs.common.model.Job compensation = 
-                job.getCompensatingJob();
-            
-            if (compensation != null) {
-                log.info("Enqueueing compensation for failed job: id={}", failedJob.getId());
-                jobEnqueuer.enqueue(compensation);
-                log.info("Compensation job enqueued for: id={}", failedJob.getId());
-            }
-        } catch (Exception e) {
-            log.error("Failed to enqueue compensation for job: id={}", 
-                failedJob.getId(), e);
         }
     }
 }
