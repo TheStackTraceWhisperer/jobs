@@ -40,6 +40,7 @@ public class BackgroundWorker {
     private final JobWorkerProperties properties;
     private final JobEnqueuer jobEnqueuer;
     private final MeterRegistry meterRegistry;
+    private final JobClaimService jobClaimService;
     
     private Semaphore semaphore;
     private ExecutorService executorService;
@@ -54,12 +55,14 @@ public class BackgroundWorker {
             JobRoutingEngine routingEngine,
             JobWorkerProperties properties,
             JobEnqueuer jobEnqueuer,
-            MeterRegistry meterRegistry) {
+            MeterRegistry meterRegistry,
+            JobClaimService jobClaimService) {
         this.jobRepository = jobRepository;
         this.routingEngine = routingEngine;
         this.properties = properties;
         this.jobEnqueuer = jobEnqueuer;
         this.meterRegistry = meterRegistry;
+        this.jobClaimService = jobClaimService;
     }
 
     @PostConstruct
@@ -110,8 +113,12 @@ public class BackgroundWorker {
         }
 
         try {
-            // Fetch and claim jobs atomically to prevent race conditions
-            List<JobEntity> claimedJobs = claimJobsAtomically(availablePermits);
+            // Delegate to service for proper transaction handling
+            List<JobEntity> claimedJobs = jobClaimService.fetchAndClaimJobs(
+                supportedJobTypes,
+                properties.getQueueName(),
+                availablePermits
+            );
             
             if (claimedJobs.isEmpty()) {
                 return;
@@ -134,53 +141,6 @@ public class BackgroundWorker {
     }
 
     /**
-     * Atomically fetches and claims jobs to prevent race conditions between workers.
-     * Only fetches jobs for which this worker has registered handlers.
-     */
-    @Transactional
-    protected List<JobEntity> claimJobsAtomically(int batchSize) {
-        if (supportedJobTypes.isEmpty()) {
-            log.warn("No job handlers registered, skipping poll");
-            return java.util.Collections.emptyList();
-        }
-        
-        // Query with pessimistic lock and job type filter
-        org.springframework.data.domain.Pageable pageRequest = 
-            org.springframework.data.domain.PageRequest.of(0, batchSize);
-            
-        org.springframework.data.domain.Page<JobEntity> candidatePage = 
-            jobRepository.findJobsReadyForProcessing(
-                JobStatus.QUEUED,
-                properties.getQueueName(),
-                LocalDateTime.now(),
-                supportedJobTypes,
-                pageRequest
-            );
-        
-        List<JobEntity> candidates = candidatePage.getContent();
-        
-        // Atomically claim by updating status
-        List<JobEntity> claimed = new java.util.ArrayList<>();
-        for (JobEntity candidate : candidates) {
-            try {
-                // Verify current state before claiming
-                JobEntity current = jobRepository.findById(candidate.getId()).orElse(null);
-                    
-                if (current != null && current.getStatus() == JobStatus.QUEUED) {
-                    current.incrementAttempts();
-                    current.markAsProcessing();
-                    jobRepository.saveAndFlush(current);
-                    claimed.add(current);
-                }
-            } catch (org.springframework.orm.ObjectOptimisticLockingFailureException ex) {
-                log.debug("Job {} already claimed by another worker", candidate.getId());
-            }
-        }
-        
-        return claimed;
-    }
-
-    /**
      * Processes a job that has already been claimed.
      */
     private void executeClaimedJob(JobEntity job) {
@@ -196,8 +156,8 @@ public class BackgroundWorker {
             // Route and execute the job
             routingEngine.route(job.getJobType(), job.getPayload());
 
-            // Mark as successful
-            markAsSuccessful(job);
+            // Delegate to service for proper transaction handling
+            jobClaimService.markJobSuccess(job.getId());
             successCounter.increment();
             
             log.info("Job completed successfully: id={}", job.getId());
@@ -206,7 +166,16 @@ public class BackgroundWorker {
             log.error("Job execution failed: id={}, type={}, error={}", 
                 job.getId(), job.getJobType(), e.getMessage(), e);
             
-            retryOrFailJob(job, e);
+            // Delegate to service for proper transaction handling
+            jobClaimService.handleJobFailure(job.getId(), e.getMessage(), properties.getMaxAttempts());
+            
+            // Check if permanently failed to handle compensation
+            if (job.getAttempts() >= properties.getMaxAttempts()) {
+                permanentFailureCounter.increment();
+                handleCompensation(job);
+            } else {
+                failureCounter.increment();
+            }
             
         } finally {
             sample.stop(executionTimer);
@@ -216,69 +185,10 @@ public class BackgroundWorker {
     }
 
     /**
-     * Marks a job as successful.
+     * Handles saga compensation if needed.
      */
-    @Transactional
-    protected void markAsSuccessful(JobEntity job) {
+    private void handleCompensation(JobEntity failedJob) {
         try {
-            JobEntity current = jobRepository.findById(job.getId()).orElseThrow();
-            current.markAsSuccess();
-            jobRepository.save(current);
-        } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
-            // Version conflict - job may have been modified by zombie reaper
-            log.warn("Version conflict when marking job as success: id={}", job.getId());
-            throw e;
-        }
-    }
-
-    /**
-     * Handles job failure with retry logic and saga compensation.
-     */
-    @Transactional
-    protected void retryOrFailJob(JobEntity job, Exception error) {
-        try {
-            JobEntity current = jobRepository.findById(job.getId()).orElseThrow();
-            
-            if (current.getAttempts() >= properties.getMaxAttempts()) {
-                // Permanently failed
-                current.markAsPermanentlyFailed(error.getMessage());
-                permanentFailureCounter.increment();
-                
-                log.warn("Job permanently failed after {} attempts: id={}", 
-                    current.getAttempts(), current.getId());
-                
-                // Handle saga compensation if applicable
-                enqueueCompensationIfNeeded(current);
-                
-            } else {
-                // Temporary failure - schedule for retry with exponential backoff
-                current.markAsFailed(error.getMessage());
-                current.setStatus(JobStatus.QUEUED);
-                
-                // Exponential backoff: 2^attempts minutes
-                int delayMinutes = (int) Math.pow(2, current.getAttempts());
-                current.setRunAt(LocalDateTime.now().plusMinutes(delayMinutes));
-                
-                failureCounter.increment();
-                
-                log.info("Job will be retried in {} minutes: id={}, attempt={}", 
-                    delayMinutes, current.getId(), current.getAttempts());
-            }
-            
-            jobRepository.save(current);
-        } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
-            // Version conflict - retry the failure handling
-            log.warn("Version conflict during failure handling for job: id={}", job.getId());
-            throw e;
-        }
-    }
-
-    /**
-     * Enqueues compensation job if the failed job has one defined.
-     */
-    private void enqueueCompensationIfNeeded(JobEntity failedJob) {
-        try {
-            // Deserialize the job to check for compensation
             Class<?> jobClass = Class.forName(failedJob.getJobType());
             com.fasterxml.jackson.databind.ObjectMapper mapper = 
                 new com.fasterxml.jackson.databind.ObjectMapper();
@@ -286,7 +196,6 @@ public class BackgroundWorker {
                 (io.github.thestacktracewhisperer.jobs.common.model.Job) 
                 mapper.readValue(failedJob.getPayload(), jobClass);
             
-            // Check if compensation is needed
             io.github.thestacktracewhisperer.jobs.common.model.Job compensation = 
                 job.getCompensatingJob();
             
