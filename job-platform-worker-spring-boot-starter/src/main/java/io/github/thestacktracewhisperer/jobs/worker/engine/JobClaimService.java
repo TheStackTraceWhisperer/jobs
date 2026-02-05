@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -111,7 +112,7 @@ public class JobClaimService {
                 current.setStatus(JobStatus.QUEUED);
                 
                 int delayMinutes = (int) Math.pow(2, current.getAttempts());
-                current.setRunAt(Instant.now().plus(java.time.Duration.ofMinutes(delayMinutes)));
+                current.setRunAt(Instant.now().plus(Duration.ofMinutes(delayMinutes)));
                 
                 log.info("Job will be retried in {} minutes: id={}, attempt={}", 
                     delayMinutes, current.getId(), current.getAttempts());

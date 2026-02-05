@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -41,7 +42,7 @@ public class MaintenanceService {
     public void reapZombieJobs() {
         try {
             Instant threshold = Instant.now()
-                .minus(java.time.Duration.ofMinutes(properties.getZombieThresholdMinutes()));
+                .minus(Duration.ofMinutes(properties.getZombieThresholdMinutes()));
 
             List<JobEntity> zombies = jobRepository.findZombieJobs(
                 JobStatus.PROCESSING, threshold);
