@@ -3,7 +3,7 @@ package io.github.thestacktracewhisperer.jobs.reference;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobEntity;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobRepository;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobStatus;
-import io.github.thestacktracewhisperer.jobs.common.model.SimpleJob;
+import io.github.thestacktracewhisperer.jobs.common.model.Job;
 import io.github.thestacktracewhisperer.jobs.producer.service.JobEnqueuer;
 import io.github.thestacktracewhisperer.jobs.worker.dispatcher.JobRoutingEngine;
 import io.github.thestacktracewhisperer.jobs.worker.handler.JobHandler;
@@ -212,12 +212,12 @@ class OrchestrationEndToEndTest {
     /**
      * Test job representing an orchestrated task in a multi-step process.
      */
-    public record OrchestratedTask(
+    public static record OrchestratedTask(
         String requestIdentifier,
         String operationName,
         ExecutionMode executionBehavior,
         int retriesBeforeSuccess
-    ) implements SimpleJob {
+    ) implements Job {
         
         public enum ExecutionMode {
             IMMEDIATE_SUCCESS,
@@ -236,6 +236,18 @@ class OrchestrationEndToEndTest {
         public OrchestratedTaskHandler orchestratedTaskHandler() {
             return new OrchestratedTaskHandler();
         }
+        
+        @Bean
+        public com.fasterxml.jackson.databind.Module testJobModule() {
+            com.fasterxml.jackson.databind.module.SimpleModule module = 
+                new com.fasterxml.jackson.databind.module.SimpleModule();
+            module.setMixInAnnotation(OrchestratedTask.class, IgnoreUnknownMixin.class);
+            return module;
+        }
+    }
+    
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
+    interface IgnoreUnknownMixin {
     }
 
     /**
