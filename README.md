@@ -8,6 +8,7 @@ A high-performance, FOSS (Free and Open Source Software) distributed background 
 - **Polymorphic Deployment**: Single codebase can act as API Node or Worker Node via Spring Profiles
 - **Zero-Dependency Logic**: Business logic decoupled from execution engine
 - **Resiliency**: Built-in exponential backoff, dead-letter queuing (DLQ), and zombie reaping
+- **Job Snooze Pattern**: Jobs can defer execution without failure penalties
 - **Fan-Out Pattern**: Distribute work across multiple child jobs
 - **Observability**: Prometheus metrics via Micrometer
 - **Race-Free**: Pessimistic locking prevents duplicate job processing
@@ -123,6 +124,38 @@ public class ReportSplitterHandler implements JobHandler<GenerateMonthlyReportJo
         
         // Enqueue finalization job
         enqueuer.enqueue(new FinalizeReportJob(job.reportId()));
+    }
+}
+```
+
+### Job Snooze Pattern (Self-Deferral)
+
+Jobs can voluntarily defer execution without counting as failures:
+
+```java
+@Component
+public class FinalizeReportHandler implements JobHandler<FinalizeReportJob> {
+    private final JobRepository jobRepository;
+    
+    @Override
+    public void handle(FinalizeReportJob job) throws Exception {
+        // Check if dependent jobs are complete
+        long pending = jobRepository.countByStatusAndBatchId(
+            JobStatus.QUEUED, job.reportId()
+        ) + jobRepository.countByStatusAndBatchId(
+            JobStatus.PROCESSING, job.reportId()
+        );
+        
+        if (pending > 0) {
+            // Defer execution for 30 seconds - does NOT increment attempt counter
+            throw new JobSnoozeException(
+                "Waiting for " + pending + " sub-tasks",
+                Duration.ofSeconds(30)
+            );
+        }
+        
+        // All dependencies complete - proceed with aggregation
+        generateFinalReport(job.reportId());
     }
 }
 ```
