@@ -79,7 +79,7 @@ job-platform-producer/
 - **Memory Safe**: Uses `AtomicLong` suppliers for gauge values
 - **Query**:
 ```sql
-SELECT queue_name, COUNT(*), MAX(DATEDIFF(SECOND, created_at, GETDATE()))
+SELECT queue_name, COUNT(queue_name), MAX(DATEDIFF(SECOND, created_at, GETDATE()))
 FROM background_jobs
 WHERE status = 'QUEUED'
 GROUP BY queue_name

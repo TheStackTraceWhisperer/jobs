@@ -155,7 +155,7 @@ The `jobs.queue.depth` and `jobs.queue.oldest.age` metrics are updated via a **s
 
 The implementation uses a native SQL query for efficiency:
 ```sql
-SELECT queue_name, COUNT(*), MAX(DATEDIFF(SECOND, created_at, GETDATE()))
+SELECT queue_name, COUNT(queue_name), MAX(DATEDIFF(SECOND, created_at, GETDATE()))
 FROM background_jobs
 WHERE status = 'QUEUED'
 GROUP BY queue_name
