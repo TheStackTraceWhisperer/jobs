@@ -5,6 +5,8 @@ global:
     monitor: 'job-platform-monitor'
 
 scrape_configs:
+  # Job Platform nodes - can be API, worker, or both
+  # All nodes expose metrics on port 8080
   - job_name: 'job-platform'
     metrics_path: '/actuator/prometheus'
     static_configs:
