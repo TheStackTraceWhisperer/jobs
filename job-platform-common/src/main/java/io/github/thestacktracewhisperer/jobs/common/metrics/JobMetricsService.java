@@ -173,6 +173,39 @@ public class JobMetricsService {
     }
 
     // ============================================================================
+    // SATURATION METRICS (Gauges)
+    // ============================================================================
+
+    /**
+     * Registers worker active gauge.
+     * This tracks the number of threads actively processing jobs.
+     * 
+     * @param queueName the queue name
+     * @param semaphore the semaphore tracking available permits
+     * @param concurrency the maximum concurrency level
+     */
+    public void registerWorkerActiveGauge(String queueName, java.util.concurrent.Semaphore semaphore, int concurrency) {
+        meterRegistry.gauge("jobs.worker.active",
+            Tags.of("queue", queueName),
+            semaphore,
+            s -> concurrency - s.availablePermits());
+    }
+
+    /**
+     * Registers worker permits available gauge.
+     * This tracks the number of available worker threads.
+     * 
+     * @param queueName the queue name
+     * @param semaphore the semaphore tracking available permits
+     */
+    public void registerWorkerPermitsAvailableGauge(String queueName, java.util.concurrent.Semaphore semaphore) {
+        meterRegistry.gauge("jobs.worker.permits.available",
+            Tags.of("queue", queueName),
+            semaphore,
+            java.util.concurrent.Semaphore::availablePermits);
+    }
+
+    // ============================================================================
     // HELPER METHODS
     // ============================================================================
 

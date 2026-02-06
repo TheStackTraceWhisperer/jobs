@@ -9,9 +9,6 @@ import io.github.thestacktracewhisperer.jobs.producer.service.JobEnqueuer;
 import io.github.thestacktracewhisperer.jobs.worker.dispatcher.JobRoutingEngine;
 import io.github.thestacktracewhisperer.jobs.common.metrics.JobMetricsService;
 import io.github.thestacktracewhisperer.jobs.worker.properties.JobWorkerProperties;
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +43,6 @@ public class BackgroundWorker {
     private final JobRoutingEngine routingEngine;
     private final JobWorkerProperties properties;
     private final JobEnqueuer jobEnqueuer;
-    private final MeterRegistry meterRegistry;
     private final JobClaimService jobClaimService;
     private final JobMetricsService metricsService;
     
@@ -64,15 +60,8 @@ public class BackgroundWorker {
         log.info("Worker supports {} job types: {}", supportedJobTypes.size(), supportedJobTypes);
         
         // Initialize saturation metrics (gauges)
-        meterRegistry.gauge("jobs.worker.active", 
-            io.micrometer.core.instrument.Tags.of("queue", properties.getQueueName()), 
-            semaphore, 
-            s -> properties.getConcurrency() - s.availablePermits());
-            
-        meterRegistry.gauge("jobs.worker.permits.available",
-            io.micrometer.core.instrument.Tags.of("queue", properties.getQueueName()),
-            semaphore,
-            Semaphore::availablePermits);
+        metricsService.registerWorkerActiveGauge(properties.getQueueName(), semaphore, properties.getConcurrency());
+        metricsService.registerWorkerPermitsAvailableGauge(properties.getQueueName(), semaphore);
             
         log.info("Background worker initialized with concurrency: {}", properties.getConcurrency());
     }
