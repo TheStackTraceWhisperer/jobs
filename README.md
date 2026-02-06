@@ -230,6 +230,17 @@ The worker properties will be automatically updated without restarting the appli
 
 **Note:** Spring Cloud dependencies are optional. The platform works without them, but dynamic configuration refresh will not be available.
 
+### Spring Cloud Kubernetes (Optional)
+
+For Kubernetes deployments, the platform supports Spring Cloud Kubernetes for automatic ConfigMap and Secret change detection with automatic bean refresh.
+
+See the [Spring Cloud Kubernetes documentation](docs/spring-cloud-kubernetes.md) for:
+- Automatic ConfigMap/Secret monitoring
+- Real-time configuration updates without pod restarts
+- RBAC setup and permissions
+- Complete deployment examples
+- Troubleshooting guide
+
 
 ## Metrics
 
