@@ -17,10 +17,9 @@ Access the dashboards:
 ## What's Included
 
 ### Prometheus
-- Scrapes metrics from job platform services every 15 seconds
-- Pre-configured to collect metrics from:
-  - `job-platform-api` on port 8080
-  - `job-platform-worker` on port 8081
+- Scrapes metrics from job platform every 15 seconds
+- Pre-configured to collect metrics from port 8080
+- Metrics include both API and worker operations (worker metrics are exposed via the API node)
 - Configuration: `prometheus/prometheus.yml`
 
 ### Grafana

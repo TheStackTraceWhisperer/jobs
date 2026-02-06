@@ -5,20 +5,12 @@ global:
     monitor: 'job-platform-monitor'
 
 scrape_configs:
-  - job_name: 'job-platform-api'
+  - job_name: 'job-platform'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['reference-app:8080']
         labels:
-          service: 'job-platform-api'
-          environment: 'local'
-
-  - job_name: 'job-platform-worker'
-    metrics_path: '/actuator/prometheus'
-    static_configs:
-      - targets: ['reference-app:8081']
-        labels:
-          service: 'job-platform-worker'
+          service: 'job-platform'
           environment: 'local'
 
   - job_name: 'prometheus'
