@@ -1,6 +1,5 @@
 package io.github.thestacktracewhisperer.jobs.common.entity;
 
-import io.github.thestacktracewhisperer.jobs.common.dto.QueueStats;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

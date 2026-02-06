@@ -34,6 +34,10 @@ public class MaintenanceService {
     private final JobWorkerProperties properties;
     private final JobMetricsService metricsService;
     private final MeterRegistry meterRegistry;
+    
+    // Cache for queue metrics to avoid recreating gauges
+    private final java.util.Map<String, java.util.concurrent.atomic.AtomicLong> queueDepthCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<String, java.util.concurrent.atomic.AtomicLong> queueAgeCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
      * Reaps zombie jobs that haven't updated their heartbeat.
@@ -96,12 +100,24 @@ public class MaintenanceService {
                 
                 Tags tags = Tags.of("queue", queueName);
                 
-                // Update queue depth gauge
-                meterRegistry.gauge("jobs.queue.depth", tags, queuedCount);
+                // Update or create queue depth gauge
+                java.util.concurrent.atomic.AtomicLong depthHolder = queueDepthCache.computeIfAbsent(queueName, 
+                    k -> {
+                        java.util.concurrent.atomic.AtomicLong holder = new java.util.concurrent.atomic.AtomicLong(0);
+                        meterRegistry.gauge("jobs.queue.depth", tags, holder, java.util.concurrent.atomic.AtomicLong::get);
+                        return holder;
+                    });
+                depthHolder.set(queuedCount);
                 
-                // Update oldest job age gauge (in seconds)
+                // Update or create oldest job age gauge
                 if (oldestJobAgeSeconds != null) {
-                    meterRegistry.gauge("jobs.queue.oldest.age", tags, oldestJobAgeSeconds);
+                    java.util.concurrent.atomic.AtomicLong ageHolder = queueAgeCache.computeIfAbsent(queueName,
+                        k -> {
+                            java.util.concurrent.atomic.AtomicLong holder = new java.util.concurrent.atomic.AtomicLong(0);
+                            meterRegistry.gauge("jobs.queue.oldest.age", tags, holder, java.util.concurrent.atomic.AtomicLong::get);
+                            return holder;
+                        });
+                    ageHolder.set(oldestJobAgeSeconds);
                 }
             }
             
