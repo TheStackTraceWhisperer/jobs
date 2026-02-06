@@ -1,6 +1,6 @@
 # Distributed Job Orchestration Platform
 
-A distributed background job system built with Java 21, Spring Boot 3.4+, and MSSQL Server.
+A distributed background job system built with Java 21, Spring Boot 3.5+, and MSSQL Server.
 
 ## Features
 
@@ -20,10 +20,10 @@ The project follows a multi-module Maven structure:
 
 ```
 job-platform-parent/
-├── job-platform-common            # Core contracts and entities
-├── job-platform-producer-starter  # Job enqueueing
-├── job-platform-worker-starter    # Job execution engine
-└── reference-app                  # Example implementation
+├── job-platform-common                        # Core contracts and entities
+├── job-platform-producer-spring-boot-starter  # Job enqueueing
+├── job-platform-worker-spring-boot-starter    # Job execution engine
+└── reference-app                              # Example implementation
 ```
 
 ## Quick Start
@@ -185,6 +185,7 @@ platform.jobs.worker.zombie-threshold-minutes=5
 platform.jobs.worker.polling-interval-ms=1000
 platform.jobs.worker.reaper-interval-ms=60000
 platform.jobs.worker.shutdown-timeout-seconds=30
+platform.jobs.worker.queue-metrics-interval-ms=15000
 ```
 
 ### Spring Cloud Bootstrap Support (Optional)
@@ -252,7 +253,7 @@ Integration tests use Testcontainers to spin up an MSSQL instance automatically.
 ## Technology Stack
 
 - **Java 21** - Records, Sealed Classes, Pattern Matching
-- **Spring Boot 3.4+** - Application framework
+- **Spring Boot 3.5+** - Application framework
 - **MSSQL Server 2019/2022** - Database
 - **Maven 3.9+** - Build tool
 - **JUnit 5 + Testcontainers** - Testing
