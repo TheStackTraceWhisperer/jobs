@@ -3,6 +3,7 @@ package io.github.thestacktracewhisperer.jobs.worker.engine;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobEntity;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobRepository;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobStatus;
+import io.github.thestacktracewhisperer.jobs.common.exception.JobSnoozeException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,6 +120,40 @@ public class JobClaimService {
             jobRepository.save(current);
         } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
             log.warn("Version conflict during failure handling for job: id={}", jobId);
+            throw e;
+        }
+    }
+
+    /**
+     * Handles job snooze by resetting status to QUEUED and refunding the attempt counter.
+     */
+    @Transactional
+    public void handleJobSnooze(java.util.UUID jobId, JobSnoozeException snooze) {
+        try {
+            JobEntity entity = jobRepository.findById(jobId).orElseThrow(
+                () -> new IllegalStateException("Job not found: " + jobId));
+            
+            // 1. Reset Status
+            entity.setStatus(JobStatus.QUEUED);
+            
+            // 2. Schedule Future Run
+            entity.setRunAt(Instant.now().plus(snooze.getDelay()));
+            
+            // 3. Refund the Attempt
+            // We subtract 1 because fetchAndClaimJobs() added 1. 
+            // This ensures the net change to 'attempts' is 0.
+            int adjustedAttempts = Math.max(0, entity.getAttempts() - 1);
+            entity.setAttempts(adjustedAttempts);
+            
+            // 4. Update Audit Log (Optional but recommended)
+            entity.setLastError("Snoozed: " + snooze.getMessage());
+            
+            jobRepository.save(entity);
+            
+            log.info("Job snoozed: id={}, delay={}, message={}", 
+                entity.getId(), snooze.getDelay(), snooze.getMessage());
+        } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
+            log.warn("Version conflict during snooze handling for job: id={}", jobId);
             throw e;
         }
     }

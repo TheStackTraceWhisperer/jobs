@@ -3,6 +3,7 @@ package io.github.thestacktracewhisperer.jobs.worker.engine;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobEntity;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobRepository;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobStatus;
+import io.github.thestacktracewhisperer.jobs.common.exception.JobSnoozeException;
 import io.github.thestacktracewhisperer.jobs.producer.context.JobContextHolder;
 import io.github.thestacktracewhisperer.jobs.producer.service.JobEnqueuer;
 import io.github.thestacktracewhisperer.jobs.worker.dispatcher.JobRoutingEngine;
@@ -147,6 +148,12 @@ public class BackgroundWorker {
             successCounter.increment();
             
             log.info("Job completed successfully: id={}", job.getId());
+
+        } catch (JobSnoozeException e) {
+            log.info("Job snoozing: id={}, delay={}", job.getId(), e.getDelay());
+            
+            // Delegate to service for proper transaction handling
+            jobClaimService.handleJobSnooze(job.getId(), e);
 
         } catch (Exception e) {
             log.error("Job execution failed: id={}, type={}, error={}", 
