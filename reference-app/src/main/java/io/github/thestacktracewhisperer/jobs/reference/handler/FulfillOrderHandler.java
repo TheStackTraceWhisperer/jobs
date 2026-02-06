@@ -3,6 +3,7 @@ package io.github.thestacktracewhisperer.jobs.reference.handler;
 import io.github.thestacktracewhisperer.jobs.reference.job.FulfillOrderJob;
 import io.github.thestacktracewhisperer.jobs.reference.service.InventoryService;
 import io.github.thestacktracewhisperer.jobs.worker.handler.JobHandler;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -12,15 +13,12 @@ import org.springframework.stereotype.Component;
  * Demonstrates saga pattern with automatic compensation on permanent failure.
  */
 @Component
+@RequiredArgsConstructor
 public class FulfillOrderHandler implements JobHandler<FulfillOrderJob> {
 
     private static final Logger log = LoggerFactory.getLogger(FulfillOrderHandler.class);
 
     private final InventoryService inventoryService;
-
-    public FulfillOrderHandler(InventoryService inventoryService) {
-        this.inventoryService = inventoryService;
-    }
 
     @Override
     public void handle(FulfillOrderJob job) throws Exception {

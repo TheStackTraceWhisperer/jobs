@@ -6,6 +6,7 @@ import io.github.thestacktracewhisperer.jobs.reference.job.GenerateMonthlyReport
 import io.github.thestacktracewhisperer.jobs.reference.job.UserReportJob;
 import io.github.thestacktracewhisperer.jobs.reference.repository.UserRepository;
 import io.github.thestacktracewhisperer.jobs.worker.handler.JobHandler;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -17,17 +18,13 @@ import java.util.stream.Stream;
  * Splits a monthly report into individual user reports.
  */
 @Component
+@RequiredArgsConstructor
 public class ReportSplitterHandler implements JobHandler<GenerateMonthlyReportJob> {
 
     private static final Logger log = LoggerFactory.getLogger(ReportSplitterHandler.class);
 
     private final JobEnqueuer enqueuer;
     private final UserRepository userRepository;
-
-    public ReportSplitterHandler(JobEnqueuer enqueuer, UserRepository userRepository) {
-        this.enqueuer = enqueuer;
-        this.userRepository = userRepository;
-    }
 
     @Override
     public void handle(GenerateMonthlyReportJob job) throws Exception {

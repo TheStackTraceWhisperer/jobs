@@ -6,6 +6,7 @@ import io.github.thestacktracewhisperer.jobs.common.entity.JobRepository;
 import io.github.thestacktracewhisperer.jobs.common.exception.JobSerializationException;
 import io.github.thestacktracewhisperer.jobs.common.model.Job;
 import io.github.thestacktracewhisperer.jobs.producer.context.JobContextHolder;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -20,6 +21,7 @@ import java.util.UUID;
  * Provides transactional job persistence with parent-child tracking and MDC trace ID capture.
  */
 @Service
+@RequiredArgsConstructor
 public class JobEnqueuer {
 
     private static final Logger log = LoggerFactory.getLogger(JobEnqueuer.class);
@@ -27,11 +29,6 @@ public class JobEnqueuer {
 
     private final JobRepository jobRepository;
     private final ObjectMapper objectMapper;
-
-    public JobEnqueuer(JobRepository jobRepository, ObjectMapper objectMapper) {
-        this.jobRepository = jobRepository;
-        this.objectMapper = objectMapper;
-    }
 
     /**
      * Enqueues a job for immediate execution.

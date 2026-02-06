@@ -4,6 +4,7 @@ import io.github.thestacktracewhisperer.jobs.common.entity.JobEntity;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobRepository;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobStatus;
 import io.github.thestacktracewhisperer.jobs.worker.properties.JobWorkerProperties;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -20,17 +21,13 @@ import java.util.List;
  */
 @Component
 @ConditionalOnProperty(prefix = "platform.jobs.worker", name = "enabled", havingValue = "true")
+@RequiredArgsConstructor
 public class MaintenanceService {
 
     private static final Logger log = LoggerFactory.getLogger(MaintenanceService.class);
 
     private final JobRepository jobRepository;
     private final JobWorkerProperties properties;
-
-    public MaintenanceService(JobRepository jobRepository, JobWorkerProperties properties) {
-        this.jobRepository = jobRepository;
-        this.properties = properties;
-    }
 
     /**
      * Reaps zombie jobs that haven't updated their heartbeat.

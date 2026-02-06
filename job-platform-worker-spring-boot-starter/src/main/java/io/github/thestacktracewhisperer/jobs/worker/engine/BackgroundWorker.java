@@ -11,6 +11,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -31,6 +32,7 @@ import java.util.concurrent.Semaphore;
  */
 @Component
 @ConditionalOnProperty(prefix = "platform.jobs.worker", name = "enabled", havingValue = "true")
+@RequiredArgsConstructor
 public class BackgroundWorker {
 
     private static final Logger log = LoggerFactory.getLogger(BackgroundWorker.class);
@@ -49,21 +51,6 @@ public class BackgroundWorker {
     private Counter permanentFailureCounter;
     private Timer executionTimer;
     private java.util.Set<String> supportedJobTypes;
-
-    public BackgroundWorker(
-            JobRepository jobRepository,
-            JobRoutingEngine routingEngine,
-            JobWorkerProperties properties,
-            JobEnqueuer jobEnqueuer,
-            MeterRegistry meterRegistry,
-            JobClaimService jobClaimService) {
-        this.jobRepository = jobRepository;
-        this.routingEngine = routingEngine;
-        this.properties = properties;
-        this.jobEnqueuer = jobEnqueuer;
-        this.meterRegistry = meterRegistry;
-        this.jobClaimService = jobClaimService;
-    }
 
     @PostConstruct
     public void initialize() {
