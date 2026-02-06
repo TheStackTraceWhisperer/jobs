@@ -56,6 +56,13 @@
             <artifactId>mssql-jdbc</artifactId>
         </dependency>
 
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- H2 for testing -->
         <dependency>
             <groupId>com.h2database</groupId>
