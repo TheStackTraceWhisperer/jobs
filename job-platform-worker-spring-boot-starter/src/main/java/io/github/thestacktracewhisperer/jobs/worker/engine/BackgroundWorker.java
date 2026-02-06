@@ -154,6 +154,7 @@ public class BackgroundWorker {
             jobClaimService.handleJobSnooze(job.getId(), e);
             
             status = "SNOOZED";
+            metricsService.recordJobCompleted(job.getJobType(), job.getQueueName(), status);
 
         } catch (Exception e) {
             log.error("Job execution failed: id={}, type={}, error={}", 
