@@ -168,47 +168,41 @@ class OrchestrationEndToEndTest {
             jobEnqueuer.enqueue(task);
         }
         
-        // STEP 2: Verify all jobs are queued
-        assertEquals(3, jobRepository.countByStatus(JobStatus.QUEUED));
+        // STEP 2: Wait for background worker to process jobs
+        // Worker polls every 100ms, give it time to pick up and start processing all 3 jobs
+        Thread.sleep(500);
         
-        // STEP 3: Process each job through worker
-        List<JobEntity> queuedJobs = jobRepository.findAll().stream()
+        // STEP 3: Verify first job completed successfully
+        assertTrue(orchestratedTaskHandler.wasProcessed("bulk-req-0"), 
+            "First job should have completed successfully");
+        assertEquals(1, orchestratedTaskHandler.getProcessingAttempts("bulk-req-0"),
+            "First job should have been attempted once");
+        
+        // STEP 4: Verify second job failed on first attempt (will retry later)
+        assertFalse(orchestratedTaskHandler.wasProcessed("bulk-req-1"),
+            "Second job should have failed on first attempt");
+        assertEquals(1, orchestratedTaskHandler.getProcessingAttempts("bulk-req-1"),
+            "Second job should have been attempted once");
+        
+        // STEP 5: Verify third job failed on first attempt (will retry later)
+        assertFalse(orchestratedTaskHandler.wasProcessed("bulk-req-2"),
+            "Third job should have failed on first attempt");
+        assertEquals(1, orchestratedTaskHandler.getProcessingAttempts("bulk-req-2"),
+            "Third job should have been attempted once");
+        
+        // STEP 6: Verify job statuses
+        List<JobEntity> allJobs = jobRepository.findAll();
+        assertEquals(3, allJobs.size(), "Should have 3 jobs total");
+        
+        long successfulJobs = allJobs.stream()
+            .filter(j -> j.getStatus() == JobStatus.SUCCESS)
+            .count();
+        assertEquals(1, successfulJobs, "Should have 1 successful job");
+        
+        long queuedJobs = allJobs.stream()
             .filter(j -> j.getStatus() == JobStatus.QUEUED)
-            .toList();
-        
-        for (JobEntity job : queuedJobs) {
-            String payload = job.getPayload();
-            String requestId = extractRequestIdFromPayload(payload);
-            
-            if (requestId.equals("bulk-req-0")) {
-                // Should succeed immediately
-                routingEngine.route(job.getJobType(), job.getPayload());
-                assertTrue(orchestratedTaskHandler.wasProcessed(requestId));
-            } else if (requestId.equals("bulk-req-1")) {
-                // Should fail twice then succeed
-                assertThrows(Exception.class, () -> 
-                    routingEngine.route(job.getJobType(), job.getPayload()));
-                assertThrows(Exception.class, () -> 
-                    routingEngine.route(job.getJobType(), job.getPayload()));
-                routingEngine.route(job.getJobType(), job.getPayload());
-                assertTrue(orchestratedTaskHandler.wasProcessed(requestId));
-            } else {
-                // Should fail permanently
-                assertThrows(Exception.class, () -> 
-                    routingEngine.route(job.getJobType(), job.getPayload()));
-            }
-        }
-    }
-
-    private String extractRequestIdFromPayload(String jsonPayload) {
-        // Use ObjectMapper for robust JSON parsing
-        try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(jsonPayload);
-            return root.get("requestIdentifier").asText();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to extract requestIdentifier from payload", e);
-        }
+            .count();
+        assertEquals(2, queuedJobs, "Should have 2 jobs queued for retry");
     }
 
     /**
