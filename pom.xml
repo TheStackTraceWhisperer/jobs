@@ -28,6 +28,7 @@
         
         <!-- Dependency Versions -->
         <spring-boot.version>3.4.2</spring-boot.version>
+        <spring-cloud.version>2024.0.0</spring-cloud.version>
         <errorprone.version>2.24.1</errorprone.version>
         <mssql-jdbc.version>12.10.2.jre11</mssql-jdbc.version>
         <testcontainers.version>1.19.7</testcontainers.version>
@@ -42,6 +43,15 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
                 <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Spring Cloud BOM -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

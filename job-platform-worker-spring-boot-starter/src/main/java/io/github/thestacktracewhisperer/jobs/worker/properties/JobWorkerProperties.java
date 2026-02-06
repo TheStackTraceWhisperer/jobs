@@ -4,6 +4,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Configuration properties for the job worker.
+ * <p>
+ * When Spring Cloud is enabled, this bean supports dynamic configuration refresh
+ * via @RefreshScope, allowing properties to be updated without restarting the application.
+ * The @RefreshScope annotation is conditionally applied via JobWorkerRefreshScopeConfiguration.
  */
 @ConfigurationProperties(prefix = "platform.jobs.worker")
 public class JobWorkerProperties {
