@@ -12,6 +12,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Background worker that polls for jobs and executes them.
@@ -36,6 +38,7 @@ import java.util.concurrent.Semaphore;
 public class BackgroundWorker {
 
     private static final Logger log = LoggerFactory.getLogger(BackgroundWorker.class);
+    private static final int FORCED_SHUTDOWN_TIMEOUT_SECONDS = 5;
 
     private final JobRepository jobRepository;
     private final JobRoutingEngine routingEngine;
@@ -173,6 +176,48 @@ public class BackgroundWorker {
             sample.stop(executionTimer);
             JobContextHolder.clear();
             semaphore.release();
+        }
+    }
+
+    /**
+     * Gracefully shuts down the executor service when the application stops.
+     * Waits for running jobs to complete before forcing shutdown.
+     */
+    @PreDestroy
+    public void shutdown() {
+        if (executorService == null) {
+            return;
+        }
+
+        log.info("Shutting down worker executor service...");
+        
+        // Stop accepting new tasks
+        executorService.shutdown();
+        
+        try {
+            // Wait for running jobs to complete
+            long timeoutSeconds = properties.getShutdownTimeoutSeconds();
+            log.info("Waiting up to {} seconds for running jobs to complete", timeoutSeconds);
+            
+            boolean terminated = executorService.awaitTermination(timeoutSeconds, TimeUnit.SECONDS);
+            
+            if (terminated) {
+                log.info("All jobs completed successfully during shutdown");
+            } else {
+                log.warn("Shutdown timeout reached. Forcing shutdown of executor service.");
+                executorService.shutdownNow();
+                
+                // Wait a bit more for forced shutdown
+                if (executorService.awaitTermination(FORCED_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                    log.info("Executor service forcefully shut down");
+                } else {
+                    log.error("Executor service did not terminate after forced shutdown");
+                }
+            }
+        } catch (InterruptedException e) {
+            log.error("Shutdown interrupted. Forcing shutdown.", e);
+            executorService.shutdownNow();
+            Thread.currentThread().interrupt();
         }
     }
 }

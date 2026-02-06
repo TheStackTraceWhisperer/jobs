@@ -19,6 +19,7 @@ This implementation delivers a complete enterprise-grade distributed job orchest
 - **Retry Logic**: Exponential backoff (2^attempts minutes)
 - **Zombie Reaping**: Automatic recovery of stuck jobs
 - **Parent-Child Tracking**: Jobs can spawn child jobs with full tracing
+- **Graceful Shutdown**: Worker executor gracefully shuts down, waiting for running jobs to complete
 
 ### 3. Advanced Patterns ✅
 - **Saga Pattern**: Automatic compensation on permanent failure (FulfillOrderJob → RefundOrderJob)
@@ -118,6 +119,7 @@ platform.jobs.worker.max-attempts=3
 platform.jobs.worker.zombie-threshold-minutes=5
 platform.jobs.worker.polling-interval-ms=1000
 platform.jobs.worker.reaper-interval-ms=60000
+platform.jobs.worker.shutdown-timeout-seconds=30
 ```
 
 ## Production Readiness
@@ -128,6 +130,7 @@ platform.jobs.worker.reaper-interval-ms=60000
 - Automatic retry and failure handling
 - Zombie job recovery
 - Proper thread management (ExecutorService)
+- Graceful shutdown with configurable timeout
 - Security validated (CodeQL)
 - Comprehensive error handling
 

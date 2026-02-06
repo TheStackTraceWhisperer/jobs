@@ -43,6 +43,11 @@ public class JobWorkerProperties {
      */
     private long reaperIntervalMs = 60000;
 
+    /**
+     * Shutdown timeout in seconds (time to wait for running jobs to complete).
+     */
+    private long shutdownTimeoutSeconds = 30;
+
     // Getters and Setters
     public boolean isEnabled() {
         return enabled;
@@ -98,5 +103,13 @@ public class JobWorkerProperties {
 
     public void setReaperIntervalMs(long reaperIntervalMs) {
         this.reaperIntervalMs = reaperIntervalMs;
+    }
+
+    public long getShutdownTimeoutSeconds() {
+        return shutdownTimeoutSeconds;
+    }
+
+    public void setShutdownTimeoutSeconds(long shutdownTimeoutSeconds) {
+        this.shutdownTimeoutSeconds = shutdownTimeoutSeconds;
     }
 }

@@ -172,6 +172,7 @@ platform.jobs.worker.max-attempts=3
 platform.jobs.worker.zombie-threshold-minutes=5
 platform.jobs.worker.polling-interval-ms=1000
 platform.jobs.worker.reaper-interval-ms=60000
+platform.jobs.worker.shutdown-timeout-seconds=30
 ```
 
 ## Metrics
