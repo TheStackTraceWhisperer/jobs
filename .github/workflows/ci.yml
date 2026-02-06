@@ -10,6 +10,8 @@ jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
     - name: Checkout code
@@ -22,11 +24,8 @@ jobs:
         distribution: 'temurin'
         cache: 'maven'
 
-    - name: Build with Maven
+    - name: Build and Test
       run: mvn clean install -B -V
-
-    - name: Run tests
-      run: mvn test -B
 
     - name: Generate JaCoCo coverage report
       run: mvn jacoco:report
