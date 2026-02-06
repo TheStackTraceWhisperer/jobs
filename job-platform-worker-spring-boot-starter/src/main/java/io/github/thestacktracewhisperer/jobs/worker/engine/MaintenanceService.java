@@ -94,7 +94,7 @@ public class MaintenanceService {
             for (Object[] row : statsResults) {
                 String queueName = (String) row[0];
                 long queuedCount = ((Number) row[1]).longValue();
-                Long oldestJobAgeSeconds = row[2] != null ? ((Number) row[2]).longValue() : null;
+                Instant oldestJobCreatedAt = row[2] != null ? (Instant) row[2] : null;
                 
                 Tags tags = Tags.of("queue", queueName);
                 
@@ -108,7 +108,10 @@ public class MaintenanceService {
                 depthHolder.set(queuedCount);
                 
                 // Update or create oldest job age gauge
-                if (oldestJobAgeSeconds != null) {
+                if (oldestJobCreatedAt != null) {
+                    // Compute age in seconds from the createdAt timestamp
+                    // Use max(0, ...) to handle clock skew or future timestamps
+                    long oldestJobAgeSeconds = Math.max(0, Duration.between(oldestJobCreatedAt, Instant.now()).getSeconds());
                     java.util.concurrent.atomic.AtomicLong ageHolder = queueAgeCache.computeIfAbsent(queueName,
                         k -> {
                             java.util.concurrent.atomic.AtomicLong holder = new java.util.concurrent.atomic.AtomicLong(0);

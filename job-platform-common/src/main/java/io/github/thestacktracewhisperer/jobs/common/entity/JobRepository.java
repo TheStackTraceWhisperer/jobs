@@ -80,20 +80,25 @@ public interface JobRepository extends JpaRepository<JobEntity, UUID> {
     long countByStatus(JobStatus status);
 
     /**
-     * Get aggregated queue statistics for all queues.
-     * Returns count of QUEUED jobs and age of oldest job per queue.
-     * Uses native query for better database compatibility.
-     * Optimized to use COUNT(queue_name) instead of COUNT(*) for better performance.
-     * 
-     * @return list of queue statistics
+     * Returns count of QUEUED jobs and creation time of the oldest job per queue.
+     * Uses JPQL for better database portability.
+     *
+     * <p>The third column in the result is the {@code Instant} representing
+     * the earliest {@code createdAt} timestamp among QUEUED jobs for the queue.
+     * Consumers can compute the age in seconds in application code if needed.</p>
+     *
+     * @return list of queue statistics as Object[]:
+     *         [0] = queue name (String),
+     *         [1] = queued count (Long),
+     *         [2] = oldest job createdAt (Instant)
      */
-    @Query(value = """
-        SELECT queue_name as queueName, 
-               COUNT(queue_name) as queuedCount,
-               MAX(DATEDIFF(SECOND, created_at, GETDATE())) as oldestJobAgeSeconds
-        FROM background_jobs
-        WHERE status = 'QUEUED'
-        GROUP BY queue_name
-        """, nativeQuery = true)
+    @Query("""
+        SELECT j.queueName AS queueName,
+               COUNT(j.queueName) AS queuedCount,
+               MIN(j.createdAt) AS oldestJobCreatedAt
+        FROM JobEntity j
+        WHERE j.status = io.github.thestacktracewhisperer.jobs.common.entity.JobStatus.QUEUED
+        GROUP BY j.queueName
+        """)
     List<Object[]> getQueueStatisticsNative();
 }
