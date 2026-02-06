@@ -6,7 +6,7 @@ This implementation adds optional support for Spring Cloud Bootstrap to enable `
 ## Changes Made
 
 ### 1. Parent POM (`pom.xml`)
-- Added Spring Cloud BOM version `2024.0.0` (compatible with Spring Boot 3.4.2)
+- Added Spring Cloud BOM version `2025.1.1` (compatible with Spring Boot 3.5.10)
 - Imported Spring Cloud dependencies in dependency management
 
 ### 2. Worker Starter POM (`job-platform-worker-spring-boot-starter/pom.xml`)
@@ -104,7 +104,7 @@ The implementation can be tested by:
 5. Verifying properties have updated without restart
 
 ## Compatibility
-- Spring Boot: 3.4.2+
-- Spring Cloud: 2024.0.0+ (Belmont release train)
+- Spring Boot: 3.5.10+
+- Spring Cloud: 2025.1.1+
 - Java: 21+
 - Backward compatible with existing deployments
