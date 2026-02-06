@@ -1,17 +1,18 @@
-# Enterprise Distributed Job Orchestration Platform
+# Distributed Job Orchestration Platform
 
-A high-performance, FOSS (Free and Open Source Software) distributed background job system built with Java 21, Spring Boot 3.4+, and MSSQL Server.
+A distributed background job system built with Java 21, Spring Boot 3.4+, and MSSQL Server.
 
 ## Features
 
-- **Transactional Integrity**: Job enqueueing is atomic with business logic (Outbox Pattern)
-- **Polymorphic Deployment**: Single codebase can act as API Node or Worker Node via Spring Profiles
-- **Zero-Dependency Logic**: Business logic decoupled from execution engine
-- **Resiliency**: Built-in exponential backoff, dead-letter queuing (DLQ), and zombie reaping
-- **Job Snooze Pattern**: Jobs can defer execution without failure penalties
-- **Fan-Out Pattern**: Distribute work across multiple child jobs
-- **Observability**: Prometheus metrics via Micrometer
-- **Race-Free**: Pessimistic locking prevents duplicate job processing
+- **Transactional job enqueueing**: Jobs are enqueued atomically with business logic using the Outbox Pattern
+- **Profile-based deployment**: Single codebase runs as API node, worker node, or both using Spring Profiles
+- **Exponential backoff**: Failed jobs retry with increasing delays
+- **Dead-letter queue**: Failed jobs after max attempts move to DLQ
+- **Zombie job detection**: Stalled jobs are automatically detected and requeued
+- **Job snooze**: Jobs can defer execution without incrementing retry counter
+- **Fan-out**: Parent jobs can enqueue multiple child jobs
+- **Prometheus metrics**: Job execution metrics exposed via Micrometer
+- **Pessimistic locking**: Database locks prevent duplicate job processing
 
 ## Architecture
 
@@ -117,7 +118,7 @@ public class ReportSplitterHandler implements JobHandler<GenerateMonthlyReportJo
     
     @Override
     public void handle(GenerateMonthlyReportJob job) throws Exception {
-        // Stream users to avoid loading all into memory
+        // Enqueue one job per user
         userRepo.streamActiveUserIds().forEach(userId -> {
             enqueuer.enqueue(new UserReportJob(job.reportId(), userId));
         });
@@ -130,7 +131,7 @@ public class ReportSplitterHandler implements JobHandler<GenerateMonthlyReportJo
 
 ### Job Snooze Pattern (Self-Deferral)
 
-Jobs can voluntarily defer execution without counting as failures:
+Jobs can defer execution without incrementing the retry counter:
 
 ```java
 @Component
@@ -147,14 +148,14 @@ public class FinalizeReportHandler implements JobHandler<FinalizeReportJob> {
         );
         
         if (pending > 0) {
-            // Defer execution for 30 seconds - does NOT increment attempt counter
+            // Defer execution for 30 seconds
             throw new JobSnoozeException(
                 "Waiting for " + pending + " sub-tasks",
                 Duration.ofSeconds(30)
             );
         }
         
-        // All dependencies complete - proceed with aggregation
+        // All dependencies complete
         generateFinalReport(job.reportId());
     }
 }
@@ -195,13 +196,13 @@ Integration tests use Testcontainers to spin up an MSSQL instance automatically.
 
 ## Technology Stack
 
-- **Java 21** - Utilizing Records, Sealed Classes, Pattern Matching
+- **Java 21** - Records, Sealed Classes, Pattern Matching
 - **Spring Boot 3.4+** - Application framework
-- **MSSQL Server 2019/2022** - Persistent storage
+- **MSSQL Server 2019/2022** - Database
 - **Maven 3.9+** - Build tool
 - **JUnit 5 + Testcontainers** - Testing
-- **JaCoCo** - Code coverage (80% minimum)
-- **Micrometer** - Observability
+- **JaCoCo** - Code coverage
+- **Micrometer** - Metrics
 
 ## License
 
