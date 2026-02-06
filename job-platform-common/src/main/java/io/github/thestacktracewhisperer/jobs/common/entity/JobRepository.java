@@ -87,7 +87,7 @@ public interface JobRepository extends JpaRepository<JobEntity, UUID> {
      * the earliest {@code createdAt} timestamp among QUEUED jobs for the queue.
      * Consumers can compute the age in seconds in application code if needed.</p>
      *
-     * @return list of queue statistics as Object[]]:
+     * @return list of queue statistics as Object[]:
      *         [0] = queue name (String),
      *         [1] = queued count (Long),
      *         [2] = oldest job createdAt (Instant)
