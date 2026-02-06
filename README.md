@@ -79,8 +79,10 @@ The API will be available at http://localhost:8080, and the worker will process 
 
 ```bash
 cd reference-app
-mvn spring-boot:run -Dspring-boot.run.profiles=api-only
+mvn spring-boot:run -Dspring-boot.run.profiles=api
 ```
+
+Just use the `api` profile without `worker` to run API-only nodes.
 
 **As Worker-only (with health endpoints):**
 
