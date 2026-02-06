@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
@@ -15,5 +16,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @ConditionalOnProperty(prefix = "platform.jobs.worker", name = "enabled", havingValue = "true")
 @EnableScheduling
 @ComponentScan(basePackages = "io.github.thestacktracewhisperer.jobs.worker")
+@Import(SpringCloudRefreshScopeConfiguration.class)
 public class JobWorkerAutoConfiguration {
 }

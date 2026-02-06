@@ -70,6 +70,18 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Spring Cloud for @RefreshScope (Optional - uncomment to enable) -->
+        <!--
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-context</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-bootstrap</artifactId>
+        </dependency>
+        -->
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

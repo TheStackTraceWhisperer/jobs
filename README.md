@@ -187,6 +187,50 @@ platform.jobs.worker.reaper-interval-ms=60000
 platform.jobs.worker.shutdown-timeout-seconds=30
 ```
 
+### Spring Cloud Bootstrap Support (Optional)
+
+The platform optionally supports Spring Cloud for dynamic configuration refresh using `@RefreshScope`.
+
+To enable Spring Cloud Bootstrap:
+
+1. **Add dependencies to your application's `pom.xml`:**
+
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-context</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-bootstrap</artifactId>
+</dependency>
+```
+
+2. **Create a `bootstrap.properties` file:**
+
+```properties
+spring.application.name=your-app-name
+```
+
+3. **Enable the refresh endpoint in your application:**
+
+```properties
+management.endpoints.web.exposure.include=health,metrics,prometheus,refresh
+```
+
+4. **Refresh configuration at runtime:**
+
+After updating configuration in your config source (Config Server, environment variables, etc.), trigger a refresh:
+
+```bash
+curl -X POST http://localhost:8080/actuator/refresh
+```
+
+The worker properties will be automatically updated without restarting the application.
+
+**Note:** Spring Cloud dependencies are optional. The platform works without them, but dynamic configuration refresh will not be available.
+
+
 ## Metrics
 
 The platform exposes Prometheus metrics at `/actuator/prometheus`:
