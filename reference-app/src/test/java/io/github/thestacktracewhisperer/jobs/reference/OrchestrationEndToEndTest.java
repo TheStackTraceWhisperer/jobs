@@ -23,6 +23,9 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -170,28 +173,31 @@ class OrchestrationEndToEndTest {
         
         // STEP 2: Wait for background worker to process jobs
         // Worker polls every 100ms (configured in application-orchestration.properties)
-        // 500ms provides ample time for the worker to pick up and process all 3 jobs (5 poll cycles)
-        Thread.sleep(500);
+        // Use Awaitility to poll until all jobs have been picked up and processed
+        await()
+            .atMost(2, SECONDS)
+            .pollInterval(50, MILLISECONDS)
+            .untilAsserted(() -> {
+                // Verify first job completed successfully
+                assertTrue(orchestratedTaskHandler.wasProcessed("bulk-req-0"), 
+                    "First job should have completed successfully");
+                assertEquals(1, orchestratedTaskHandler.getProcessingAttempts("bulk-req-0"),
+                    "First job should have been attempted once");
+                
+                // Verify second job failed on first attempt (will retry later)
+                assertFalse(orchestratedTaskHandler.wasProcessed("bulk-req-1"),
+                    "Second job should have failed on first attempt");
+                assertEquals(1, orchestratedTaskHandler.getProcessingAttempts("bulk-req-1"),
+                    "Second job should have been attempted once");
+                
+                // Verify third job failed on first attempt (will retry later)
+                assertFalse(orchestratedTaskHandler.wasProcessed("bulk-req-2"),
+                    "Third job should have failed on first attempt");
+                assertEquals(1, orchestratedTaskHandler.getProcessingAttempts("bulk-req-2"),
+                    "Third job should have been attempted once");
+            });
         
-        // STEP 3: Verify first job completed successfully
-        assertTrue(orchestratedTaskHandler.wasProcessed("bulk-req-0"), 
-            "First job should have completed successfully");
-        assertEquals(1, orchestratedTaskHandler.getProcessingAttempts("bulk-req-0"),
-            "First job should have been attempted once");
-        
-        // STEP 4: Verify second job failed on first attempt (will retry later)
-        assertFalse(orchestratedTaskHandler.wasProcessed("bulk-req-1"),
-            "Second job should have failed on first attempt");
-        assertEquals(1, orchestratedTaskHandler.getProcessingAttempts("bulk-req-1"),
-            "Second job should have been attempted once");
-        
-        // STEP 5: Verify third job failed on first attempt (will retry later)
-        assertFalse(orchestratedTaskHandler.wasProcessed("bulk-req-2"),
-            "Third job should have failed on first attempt");
-        assertEquals(1, orchestratedTaskHandler.getProcessingAttempts("bulk-req-2"),
-            "Third job should have been attempted once");
-        
-        // STEP 6: Verify job statuses
+        // STEP 3: Verify job statuses
         List<JobEntity> allJobs = jobRepository.findAll();
         assertEquals(3, allJobs.size(), "Should have 3 jobs total");
         
