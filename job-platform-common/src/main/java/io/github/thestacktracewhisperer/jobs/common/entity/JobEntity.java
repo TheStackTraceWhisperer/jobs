@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -48,10 +48,10 @@ public class JobEntity {
 
     @NotNull
     @Column(name = "run_at", nullable = false)
-    private LocalDateTime runAt = LocalDateTime.now();
+    private Instant runAt = Instant.now();
 
     @Column(name = "last_heartbeat")
-    private LocalDateTime lastHeartbeat;
+    private Instant lastHeartbeat;
 
     @Version
     @Column(name = "version", nullable = false)
@@ -64,7 +64,7 @@ public class JobEntity {
     private UUID parentJobId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 
     @Column(name = "last_error", columnDefinition = "NVARCHAR(MAX)")
     private String lastError;
@@ -73,17 +73,17 @@ public class JobEntity {
         this.queueName = queueName;
         this.jobType = jobType;
         this.payload = payload;
-        this.createdAt = LocalDateTime.now();
-        this.runAt = LocalDateTime.now();
+        this.createdAt = Instant.now();
+        this.runAt = Instant.now();
     }
 
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {
-            createdAt = LocalDateTime.now();
+            createdAt = Instant.now();
         }
         if (runAt == null) {
-            runAt = LocalDateTime.now();
+            runAt = Instant.now();
         }
     }
 
@@ -93,7 +93,7 @@ public class JobEntity {
 
     public void markAsProcessing() {
         this.status = JobStatus.PROCESSING;
-        this.lastHeartbeat = LocalDateTime.now();
+        this.lastHeartbeat = Instant.now();
     }
 
     public void markAsSuccess() {

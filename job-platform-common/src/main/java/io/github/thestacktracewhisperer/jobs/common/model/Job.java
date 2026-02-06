@@ -13,13 +13,4 @@ public interface Job {
     default String queueName() {
         return "DEFAULT";
     }
-    
-    /**
-     * Returns the compensating job to execute if this job permanently fails.
-     * This enables the Saga pattern for automatic compensation.
-     * @return the compensating job, or null if no compensation is needed
-     */
-    default Job getCompensatingJob() {
-        return null;
-    }
 }

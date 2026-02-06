@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Primary;
 
 /**
  * Test configuration that provides an ObjectMapper configured to ignore unknown properties.
- * This handles the case where Job interface methods like getCompensatingJob() are serialized
+ * This handles the case where Job interface methods are serialized
  * but the record doesn't have corresponding fields.
  */
 @TestConfiguration

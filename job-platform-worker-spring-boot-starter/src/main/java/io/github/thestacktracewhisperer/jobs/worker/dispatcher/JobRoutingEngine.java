@@ -8,7 +8,7 @@ import io.github.thestacktracewhisperer.jobs.worker.handler.JobHandler;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
@@ -17,7 +17,7 @@ import java.util.Map;
 
 /**
  * Routes jobs to their appropriate handlers based on job type.
- * Scans the application context for all JobHandler beans on startup.
+ * Uses ObjectProvider to discover all JobHandler beans on startup.
  */
 @Component
 @RequiredArgsConstructor
@@ -25,18 +25,16 @@ public class JobRoutingEngine {
 
     private static final Logger log = LoggerFactory.getLogger(JobRoutingEngine.class);
 
-    private final ApplicationContext applicationContext;
+    private final ObjectProvider<JobHandler<?>> handlersProvider;
     private final ObjectMapper objectMapper;
     private final Map<String, JobHandler<?>> handlerRegistry = new HashMap<>();
 
     /**
-     * Scans the application context for all JobHandler beans and builds a registry.
+     * Uses ObjectProvider to discover all JobHandler beans and builds a registry.
      */
     @PostConstruct
     public void initialize() {
-        Map<String, JobHandler> handlers = applicationContext.getBeansOfType(JobHandler.class);
-        
-        for (JobHandler<?> handler : handlers.values()) {
+        handlersProvider.stream().forEach(handler -> {
             try {
                 // Use reflection to determine the job type
                 Class<?> jobType = getJobTypeForHandler(handler);
@@ -46,7 +44,7 @@ public class JobRoutingEngine {
             } catch (Exception e) {
                 log.warn("Failed to register handler: {}", handler.getClass().getName(), e);
             }
-        }
+        });
         
         log.info("Job routing engine initialized with {} handlers", handlerRegistry.size());
     }

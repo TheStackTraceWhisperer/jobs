@@ -9,7 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -49,7 +50,7 @@ public class JobClaimService {
             jobRepository.findJobsReadyForProcessing(
                 JobStatus.QUEUED,
                 queueName,
-                LocalDateTime.now(),
+                Instant.now(),
                 supportedTypes,
                 pageRequest
             );
@@ -109,7 +110,7 @@ public class JobClaimService {
                 current.setStatus(JobStatus.QUEUED);
                 
                 int delayMinutes = (int) Math.pow(2, current.getAttempts());
-                current.setRunAt(LocalDateTime.now().plusMinutes(delayMinutes));
+                current.setRunAt(Instant.now().plus(Duration.ofMinutes(delayMinutes)));
                 
                 log.info("Job will be retried in {} minutes: id={}, attempt={}", 
                     delayMinutes, current.getId(), current.getAttempts());
