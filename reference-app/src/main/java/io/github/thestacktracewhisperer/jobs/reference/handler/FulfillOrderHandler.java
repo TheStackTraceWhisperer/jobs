@@ -4,8 +4,7 @@ import io.github.thestacktracewhisperer.jobs.reference.job.FulfillOrderJob;
 import io.github.thestacktracewhisperer.jobs.reference.service.InventoryService;
 import io.github.thestacktracewhisperer.jobs.worker.handler.JobHandler;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
@@ -14,9 +13,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class FulfillOrderHandler implements JobHandler<FulfillOrderJob> {
-
-    private static final Logger log = LoggerFactory.getLogger(FulfillOrderHandler.class);
 
     private final InventoryService inventoryService;
 

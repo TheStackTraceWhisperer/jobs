@@ -7,8 +7,7 @@ import io.github.thestacktracewhisperer.jobs.common.exception.JobSerializationEx
 import io.github.thestacktracewhisperer.jobs.common.model.Job;
 import io.github.thestacktracewhisperer.jobs.producer.context.JobContextHolder;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,9 +21,8 @@ import java.util.UUID;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class JobEnqueuer {
-
-    private static final Logger log = LoggerFactory.getLogger(JobEnqueuer.class);
     private static final String MDC_TRACE_ID_KEY = "traceId";
 
     private final JobRepository jobRepository;

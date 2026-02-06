@@ -4,8 +4,7 @@ import io.github.thestacktracewhisperer.jobs.reference.job.UserReportJob;
 import io.github.thestacktracewhisperer.jobs.reference.service.ReportService;
 import io.github.thestacktracewhisperer.jobs.worker.handler.JobHandler;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
@@ -13,9 +12,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class UserReportHandler implements JobHandler<UserReportJob> {
-
-    private static final Logger log = LoggerFactory.getLogger(UserReportHandler.class);
 
     private final ReportService reportService;
 
