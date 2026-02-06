@@ -498,10 +498,32 @@ kubectl exec -it deployment/job-platform-worker -- \
 
 1. **Update Secret:**
 ```bash
-kubectl create secret generic job-platform-secrets \
-  --from-literal=spring.datasource.password='NewPassword123!' \
-  --dry-run=client -o yaml | kubectl apply -f -
+# Create a temporary file (recommended for security)
+cat > /tmp/secret-update.yaml <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: job-platform-secrets
+  namespace: default
+type: Opaque
+stringData:
+  application.yml: |
+    spring:
+      datasource:
+        url: jdbc:sqlserver://mssql:1433;databaseName=jobs;encrypt=false
+        username: sa
+        password: NewPassword123!
+        driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+EOF
+
+kubectl apply -f /tmp/secret-update.yaml
+rm -f /tmp/secret-update.yaml
+
+# Alternative: Use kubectl edit for interactive editing
+# kubectl edit secret job-platform-secrets
 ```
+
+**Security Note:** Avoid using `--from-literal` for secrets as it exposes sensitive values in shell history and process lists. Use files or `kubectl edit` instead.
 
 2. **Watch for refresh:**
 ```bash
