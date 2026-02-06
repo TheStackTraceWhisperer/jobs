@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.github.thestacktracewhisperer.jobs.common.annotation.PlatformJsonSerializer;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobRepository;
+import io.github.thestacktracewhisperer.jobs.common.metrics.JobMetricsService;
 import io.github.thestacktracewhisperer.jobs.producer.service.JobEnqueuer;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
@@ -30,7 +32,15 @@ public class JobProducerAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public JobEnqueuer jobEnqueuer(JobRepository jobRepository, @PlatformJsonSerializer ObjectMapper objectMapper) {
-        return new JobEnqueuer(jobRepository, objectMapper);
+    public JobMetricsService jobMetricsService(MeterRegistry meterRegistry) {
+        return new JobMetricsService(meterRegistry);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public JobEnqueuer jobEnqueuer(JobRepository jobRepository, 
+                                   @PlatformJsonSerializer ObjectMapper objectMapper,
+                                   JobMetricsService metricsService) {
+        return new JobEnqueuer(jobRepository, objectMapper, metricsService);
     }
 }

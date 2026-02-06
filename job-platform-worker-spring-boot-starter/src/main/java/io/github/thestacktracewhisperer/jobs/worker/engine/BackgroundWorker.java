@@ -7,6 +7,7 @@ import io.github.thestacktracewhisperer.jobs.common.exception.JobSnoozeException
 import io.github.thestacktracewhisperer.jobs.producer.context.JobContextHolder;
 import io.github.thestacktracewhisperer.jobs.producer.service.JobEnqueuer;
 import io.github.thestacktracewhisperer.jobs.worker.dispatcher.JobRoutingEngine;
+import io.github.thestacktracewhisperer.jobs.common.metrics.JobMetricsService;
 import io.github.thestacktracewhisperer.jobs.worker.properties.JobWorkerProperties;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,13 +48,10 @@ public class BackgroundWorker {
     private final JobEnqueuer jobEnqueuer;
     private final MeterRegistry meterRegistry;
     private final JobClaimService jobClaimService;
+    private final JobMetricsService metricsService;
     
     private Semaphore semaphore;
     private ExecutorService executorService;
-    private Counter successCounter;
-    private Counter failureCounter;
-    private Counter permanentFailureCounter;
-    private Timer executionTimer;
     private java.util.Set<String> supportedJobTypes;
 
     @PostConstruct
@@ -64,28 +63,16 @@ public class BackgroundWorker {
         this.supportedJobTypes = routingEngine.getRegisteredJobTypes();
         log.info("Worker supports {} job types: {}", supportedJobTypes.size(), supportedJobTypes);
         
-        // Initialize metrics
-        this.successCounter = Counter.builder("jobs.completed.total")
-            .tag("status", "success")
-            .description("Total number of successfully completed jobs")
-            .register(meterRegistry);
-            
-        this.failureCounter = Counter.builder("jobs.completed.total")
-            .tag("status", "failed")
-            .description("Total number of failed jobs")
-            .register(meterRegistry);
-            
-        this.permanentFailureCounter = Counter.builder("jobs.completed.total")
-            .tag("status", "permanently_failed")
-            .description("Total number of permanently failed jobs")
-            .register(meterRegistry);
-            
-        this.executionTimer = Timer.builder("jobs.execution.time")
-            .description("Job execution time")
-            .register(meterRegistry);
-            
-        meterRegistry.gauge("jobs.active.count", semaphore, 
+        // Initialize saturation metrics (gauges)
+        meterRegistry.gauge("jobs.worker.active", 
+            io.micrometer.core.instrument.Tags.of("queue", properties.getQueueName()), 
+            semaphore, 
             s -> properties.getConcurrency() - s.availablePermits());
+            
+        meterRegistry.gauge("jobs.worker.permits.available",
+            io.micrometer.core.instrument.Tags.of("queue", properties.getQueueName()),
+            semaphore,
+            Semaphore::availablePermits);
             
         log.info("Background worker initialized with concurrency: {}", properties.getConcurrency());
     }
@@ -99,10 +86,14 @@ public class BackgroundWorker {
         // Guard: Skip if no permits available
         int availablePermits = semaphore.availablePermits();
         if (availablePermits == 0) {
+            metricsService.recordPollerLoop("skipped_full");
             return;
         }
 
         try {
+            // Measure DB poll time
+            Instant pollStart = Instant.now();
+            
             // Delegate to service for proper transaction handling
             List<JobEntity> claimedJobs = jobClaimService.fetchAndClaimJobs(
                 supportedJobTypes,
@@ -110,15 +101,23 @@ public class BackgroundWorker {
                 availablePermits
             );
             
+            Duration pollDuration = Duration.between(pollStart, Instant.now());
+            metricsService.recordDbPollTime(properties.getQueueName(), pollDuration);
+            
             if (claimedJobs.isEmpty()) {
+                metricsService.recordPollerLoop("empty");
                 return;
             }
 
+            metricsService.recordPollerLoop("found_jobs");
             log.debug("Claimed {} jobs for processing", claimedJobs.size());
 
             // Process each claimed job asynchronously
             for (JobEntity job : claimedJobs) {
                 if (semaphore.tryAcquire()) {
+                    // Record that job was started
+                    metricsService.recordJobStarted(job.getJobType(), job.getQueueName());
+                    
                     // Submit job to executor service for processing
                     executorService.submit(() -> executeClaimedJob(job));
                 } else {
@@ -134,7 +133,8 @@ public class BackgroundWorker {
      * Processes a job that has already been claimed.
      */
     private void executeClaimedJob(JobEntity job) {
-        Timer.Sample sample = Timer.start(meterRegistry);
+        Instant executionStart = Instant.now();
+        String status = "FAILED";
         
         try {
             // Set job context for parent-child tracking
@@ -143,12 +143,18 @@ public class BackgroundWorker {
             log.info("Executing job: id={}, type={}, attempt={}", 
                 job.getId(), job.getJobType(), job.getAttempts());
 
+            // Calculate and record queue wait time
+            Duration waitTime = Duration.between(job.getRunAt(), executionStart);
+            metricsService.recordQueueWaitTime(job.getJobType(), job.getQueueName(), waitTime);
+
             // Route and execute the job
             routingEngine.route(job.getJobType(), job.getPayload());
 
             // Delegate to service for proper transaction handling
             jobClaimService.markJobSuccess(job.getId());
-            successCounter.increment();
+            
+            status = "SUCCESS";
+            metricsService.recordJobCompleted(job.getJobType(), job.getQueueName(), status);
             
             log.info("Job completed successfully: id={}", job.getId());
 
@@ -157,23 +163,34 @@ public class BackgroundWorker {
             
             // Delegate to service for proper transaction handling
             jobClaimService.handleJobSnooze(job.getId(), e);
+            
+            status = "SNOOZED";
 
         } catch (Exception e) {
             log.error("Job execution failed: id={}, type={}, error={}", 
                 job.getId(), job.getJobType(), e.getMessage(), e);
             
+            // Record exception type
+            metricsService.recordJobException(job.getJobType(), e.getClass().getSimpleName());
+            
             // Delegate to service for proper transaction handling
             jobClaimService.handleJobFailure(job.getId(), e.getMessage(), properties.getMaxAttempts());
             
-            // Check if permanently failed
+            // Check if permanently failed or will retry
             if (job.getAttempts() >= properties.getMaxAttempts()) {
-                permanentFailureCounter.increment();
+                status = "PERMANENTLY_FAILED";
+                metricsService.recordDeadLetter(job.getJobType());
             } else {
-                failureCounter.increment();
+                status = "FAILED";
+                metricsService.recordJobRetry(job.getJobType());
             }
             
+            metricsService.recordJobCompleted(job.getJobType(), job.getQueueName(), status);
+            
         } finally {
-            sample.stop(executionTimer);
+            Duration executionDuration = Duration.between(executionStart, Instant.now());
+            metricsService.recordExecutionTime(job.getJobType(), status, executionDuration);
+            
             JobContextHolder.clear();
             semaphore.release();
         }

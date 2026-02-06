@@ -1,5 +1,6 @@
 package io.github.thestacktracewhisperer.jobs.common.entity;
 
+import io.github.thestacktracewhisperer.jobs.common.dto.QueueStats;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -78,4 +79,21 @@ public interface JobRepository extends JpaRepository<JobEntity, UUID> {
      * @return count of jobs
      */
     long countByStatus(JobStatus status);
+
+    /**
+     * Get aggregated queue statistics for all queues.
+     * Returns count of QUEUED jobs and age of oldest job per queue.
+     * Uses native query for better database compatibility.
+     * 
+     * @return list of queue statistics
+     */
+    @Query(value = """
+        SELECT queue_name as queueName, 
+               COUNT(*) as queuedCount,
+               MAX(DATEDIFF(SECOND, created_at, GETDATE())) as oldestJobAgeSeconds
+        FROM background_jobs
+        WHERE status = 'QUEUED'
+        GROUP BY queue_name
+        """, nativeQuery = true)
+    List<Object[]> getQueueStatisticsNative();
 }
