@@ -66,23 +66,34 @@ mvn clean install
 
 ### 4. Run the Application
 
-**As API Node (produces jobs, doesn't process them):**
+**As API + Worker (recommended for development):**
+
+```bash
+cd reference-app
+mvn spring-boot:run -Dspring-boot.run.profiles=api,worker
+```
+
+The API will be available at http://localhost:8080, and the worker will process jobs.
+
+**As API-only (no job processing):**
 
 ```bash
 cd reference-app
 mvn spring-boot:run -Dspring-boot.run.profiles=api
 ```
 
-The API will be available at http://localhost:8080
+Just use the `api` profile without `worker` to run API-only nodes.
 
-**As Worker Node (processes jobs):**
+**As Worker-only (with health endpoints):**
 
 ```bash
 cd reference-app
 mvn spring-boot:run -Dspring-boot.run.profiles=worker
 ```
 
-**As Both (for development):**
+Worker exposes health/readiness endpoints on port 8080 for Kubernetes liveness/readiness probes.
+
+**As Both (no profiles - development):**
 
 ```bash
 cd reference-app

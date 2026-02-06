@@ -44,6 +44,12 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
+        <!-- Micrometer for Metrics -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+        </dependency>
+
         <!-- SLF4J for MDC -->
         <dependency>
             <groupId>org.slf4j</groupId>

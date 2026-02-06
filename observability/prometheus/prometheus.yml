@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'job-platform-monitor'
+
+scrape_configs:
+  # Job Platform nodes - can be API, worker, or both
+  # All nodes expose metrics on port 8080
+  - job_name: 'job-platform'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['reference-app:8080']
+        labels:
+          service: 'job-platform'
+          environment: 'local'
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

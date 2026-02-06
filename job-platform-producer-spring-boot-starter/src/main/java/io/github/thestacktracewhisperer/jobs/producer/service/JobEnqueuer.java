@@ -6,6 +6,7 @@ import io.github.thestacktracewhisperer.jobs.common.entity.JobRepository;
 import io.github.thestacktracewhisperer.jobs.common.exception.JobSerializationException;
 import io.github.thestacktracewhisperer.jobs.common.model.Job;
 import io.github.thestacktracewhisperer.jobs.producer.context.JobContextHolder;
+import io.github.thestacktracewhisperer.jobs.common.metrics.JobMetricsService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,7 @@ import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -29,6 +31,7 @@ public class JobEnqueuer {
 
     private final JobRepository jobRepository;
     private final ObjectMapper objectMapper;
+    private final JobMetricsService metricsService;
 
     /**
      * Enqueues a job for immediate execution.
@@ -50,10 +53,12 @@ public class JobEnqueuer {
      */
     @Transactional
     public JobEntity enqueue(Job job, Instant runAt) {
+        Instant enqueueStart = Instant.now();
+        String jobType = job.getClass().getName();
+        
         try {
             // Serialize job to JSON
             String payload = objectMapper.writeValueAsString(job);
-            String jobType = job.getClass().getName();
             String queueName = job.queueName();
 
             // Create job entity
@@ -80,6 +85,12 @@ public class JobEnqueuer {
 
             // Persist and return
             JobEntity saved = jobRepository.save(entity);
+            
+            // Record metrics
+            Duration enqueueDuration = Duration.between(enqueueStart, Instant.now());
+            metricsService.recordEnqueueTime(jobType, enqueueDuration);
+            metricsService.recordJobEnqueued(jobType, queueName);
+            
             log.info("Enqueued job: id={}, type={}, queue={}", 
                 saved.getId(), jobType, queueName);
             
@@ -87,7 +98,7 @@ public class JobEnqueuer {
 
         } catch (Exception e) {
             throw new JobSerializationException(
-                "Failed to serialize job: " + job.getClass().getName(), e);
+                "Failed to serialize job: " + jobType, e);
         }
     }
 }
