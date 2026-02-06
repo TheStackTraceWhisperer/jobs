@@ -7,8 +7,7 @@ import io.github.thestacktracewhisperer.jobs.reference.job.UserReportJob;
 import io.github.thestacktracewhisperer.jobs.reference.repository.UserRepository;
 import io.github.thestacktracewhisperer.jobs.worker.handler.JobHandler;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.stream.Stream;
@@ -19,9 +18,8 @@ import java.util.stream.Stream;
  */
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class ReportSplitterHandler implements JobHandler<GenerateMonthlyReportJob> {
-
-    private static final Logger log = LoggerFactory.getLogger(ReportSplitterHandler.class);
 
     private final JobEnqueuer enqueuer;
     private final UserRepository userRepository;

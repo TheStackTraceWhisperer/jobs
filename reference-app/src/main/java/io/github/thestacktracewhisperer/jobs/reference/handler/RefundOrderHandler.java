@@ -4,8 +4,7 @@ import io.github.thestacktracewhisperer.jobs.reference.job.RefundOrderJob;
 import io.github.thestacktracewhisperer.jobs.reference.service.PaymentService;
 import io.github.thestacktracewhisperer.jobs.worker.handler.JobHandler;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
@@ -13,9 +12,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class RefundOrderHandler implements JobHandler<RefundOrderJob> {
-
-    private static final Logger log = LoggerFactory.getLogger(RefundOrderHandler.class);
 
     private final PaymentService paymentService;
 

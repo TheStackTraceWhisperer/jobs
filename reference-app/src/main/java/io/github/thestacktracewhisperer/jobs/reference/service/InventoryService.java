@@ -1,7 +1,6 @@
 package io.github.thestacktracewhisperer.jobs.reference.service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -10,9 +9,8 @@ import java.util.UUID;
  * Mock inventory service for demonstration.
  */
 @Service
+@Slf4j
 public class InventoryService {
-
-    private static final Logger log = LoggerFactory.getLogger(InventoryService.class);
 
     public void reserveInventory(UUID orderId) {
         log.info("Reserving inventory for order: {}", orderId);

@@ -6,8 +6,7 @@ import io.github.thestacktracewhisperer.jobs.common.exception.JobSerializationEx
 import io.github.thestacktracewhisperer.jobs.common.model.Job;
 import io.github.thestacktracewhisperer.jobs.worker.handler.JobHandler;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
@@ -21,9 +20,8 @@ import java.util.Map;
  */
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JobRoutingEngine {
-
-    private static final Logger log = LoggerFactory.getLogger(JobRoutingEngine.class);
 
     private final ObjectProvider<JobHandler<?>> handlersProvider;
     private final ObjectMapper objectMapper;

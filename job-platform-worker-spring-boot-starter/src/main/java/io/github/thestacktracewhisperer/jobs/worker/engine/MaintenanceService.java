@@ -8,8 +8,7 @@ import io.github.thestacktracewhisperer.jobs.worker.properties.JobWorkerProperti
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -26,9 +25,8 @@ import java.util.List;
 @Component
 @ConditionalOnProperty(prefix = "platform.jobs.worker", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
+@Slf4j
 public class MaintenanceService {
-
-    private static final Logger log = LoggerFactory.getLogger(MaintenanceService.class);
 
     private final JobRepository jobRepository;
     private final JobWorkerProperties properties;

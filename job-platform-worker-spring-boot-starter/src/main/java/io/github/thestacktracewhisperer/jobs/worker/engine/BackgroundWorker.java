@@ -12,8 +12,7 @@ import io.github.thestacktracewhisperer.jobs.worker.properties.JobWorkerProperti
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -34,9 +33,8 @@ import java.util.concurrent.TimeUnit;
 @Component
 @ConditionalOnProperty(prefix = "platform.jobs.worker", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
+@Slf4j
 public class BackgroundWorker {
-
-    private static final Logger log = LoggerFactory.getLogger(BackgroundWorker.class);
     private static final int FORCED_SHUTDOWN_TIMEOUT_SECONDS = 5;
 
     private final JobRepository jobRepository;
