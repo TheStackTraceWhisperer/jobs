@@ -50,7 +50,8 @@ class OrchestrationEndToEndTest {
 
     @BeforeEach
     void setupTestScenario() {
-        jobRepository.deleteAll();
+        // Use deleteAllInBatch to avoid optimistic locking issues with concurrent worker threads
+        jobRepository.deleteAllInBatch();
         orchestratedTaskHandler.resetState();
     }
 
