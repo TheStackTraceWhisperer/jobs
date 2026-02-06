@@ -2,6 +2,7 @@ package io.github.thestacktracewhisperer.jobs.reference.config;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.thestacktracewhisperer.jobs.common.annotation.PlatformJsonSerializer;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -16,6 +17,7 @@ public class TestObjectMapperConfig {
     
     @Bean
     @Primary
+    @PlatformJsonSerializer
     public ObjectMapper testObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);

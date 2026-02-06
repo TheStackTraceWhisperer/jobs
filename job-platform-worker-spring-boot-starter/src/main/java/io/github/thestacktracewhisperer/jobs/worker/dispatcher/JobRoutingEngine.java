@@ -5,6 +5,7 @@ import io.github.thestacktracewhisperer.jobs.common.exception.JobHandlerNotFound
 import io.github.thestacktracewhisperer.jobs.common.exception.JobSerializationException;
 import io.github.thestacktracewhisperer.jobs.common.model.Job;
 import io.github.thestacktracewhisperer.jobs.worker.handler.JobHandler;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -19,6 +20,7 @@ import java.util.Map;
  * Uses ObjectProvider to discover all JobHandler beans on startup.
  */
 @Component
+@RequiredArgsConstructor
 public class JobRoutingEngine {
 
     private static final Logger log = LoggerFactory.getLogger(JobRoutingEngine.class);
@@ -26,11 +28,6 @@ public class JobRoutingEngine {
     private final ObjectProvider<JobHandler<?>> handlersProvider;
     private final ObjectMapper objectMapper;
     private final Map<String, JobHandler<?>> handlerRegistry = new HashMap<>();
-
-    public JobRoutingEngine(ObjectProvider<JobHandler<?>> handlersProvider, ObjectMapper objectMapper) {
-        this.handlersProvider = handlersProvider;
-        this.objectMapper = objectMapper;
-    }
 
     /**
      * Uses ObjectProvider to discover all JobHandler beans and builds a registry.

@@ -4,6 +4,7 @@ import io.github.thestacktracewhisperer.jobs.common.entity.JobEntity;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobRepository;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobStatus;
 import io.github.thestacktracewhisperer.jobs.common.exception.JobSnoozeException;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -21,15 +22,12 @@ import java.util.List;
  * Separated from BackgroundWorker to ensure proper transaction propagation through Spring proxy.
  */
 @Service
+@RequiredArgsConstructor
 public class JobClaimService {
 
     private static final Logger log = LoggerFactory.getLogger(JobClaimService.class);
 
     private final JobRepository jobRepository;
-
-    public JobClaimService(JobRepository jobRepository) {
-        this.jobRepository = jobRepository;
-    }
 
     /**
      * Atomically fetches and claims jobs within a single transaction.

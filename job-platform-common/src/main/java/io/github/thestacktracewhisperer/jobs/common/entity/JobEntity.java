@@ -2,6 +2,10 @@ package io.github.thestacktracewhisperer.jobs.common.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -13,6 +17,9 @@ import java.util.UUID;
     @Index(name = "idx_jobs_polling", columnList = "status,queue_name,run_at,version,attempts"),
     @Index(name = "idx_jobs_heartbeat", columnList = "status,last_heartbeat")
 })
+@Getter
+@Setter
+@NoArgsConstructor
 public class JobEntity {
 
     @Id
@@ -62,121 +69,12 @@ public class JobEntity {
     @Column(name = "last_error", columnDefinition = "NVARCHAR(MAX)")
     private String lastError;
 
-    // Constructors
-    public JobEntity() {
-    }
-
     public JobEntity(String queueName, String jobType, String payload) {
         this.queueName = queueName;
         this.jobType = jobType;
         this.payload = payload;
         this.createdAt = Instant.now();
         this.runAt = Instant.now();
-    }
-
-    // Getters and Setters
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public String getQueueName() {
-        return queueName;
-    }
-
-    public void setQueueName(String queueName) {
-        this.queueName = queueName;
-    }
-
-    public String getJobType() {
-        return jobType;
-    }
-
-    public void setJobType(String jobType) {
-        this.jobType = jobType;
-    }
-
-    public String getPayload() {
-        return payload;
-    }
-
-    public void setPayload(String payload) {
-        this.payload = payload;
-    }
-
-    public JobStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(JobStatus status) {
-        this.status = status;
-    }
-
-    public int getAttempts() {
-        return attempts;
-    }
-
-    public void setAttempts(int attempts) {
-        this.attempts = attempts;
-    }
-
-    public Instant getRunAt() {
-        return runAt;
-    }
-
-    public void setRunAt(Instant runAt) {
-        this.runAt = runAt;
-    }
-
-    public Instant getLastHeartbeat() {
-        return lastHeartbeat;
-    }
-
-    public void setLastHeartbeat(Instant lastHeartbeat) {
-        this.lastHeartbeat = lastHeartbeat;
-    }
-
-    public int getVersion() {
-        return version;
-    }
-
-    public void setVersion(int version) {
-        this.version = version;
-    }
-
-    public UUID getTraceId() {
-        return traceId;
-    }
-
-    public void setTraceId(UUID traceId) {
-        this.traceId = traceId;
-    }
-
-    public UUID getParentJobId() {
-        return parentJobId;
-    }
-
-    public void setParentJobId(UUID parentJobId) {
-        this.parentJobId = parentJobId;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public String getLastError() {
-        return lastError;
-    }
-
-    public void setLastError(String lastError) {
-        this.lastError = lastError;
     }
 
     @PrePersist
