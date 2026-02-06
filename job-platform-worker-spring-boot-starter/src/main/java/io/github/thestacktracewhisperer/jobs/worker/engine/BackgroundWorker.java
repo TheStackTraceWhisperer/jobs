@@ -23,6 +23,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -46,12 +48,16 @@ public class BackgroundWorker {
     
     private Semaphore semaphore;
     private ExecutorService executorService;
+    private ScheduledExecutorService heartbeatScheduler;
     private java.util.Set<String> supportedJobTypes;
 
     @PostConstruct
     public void initialize() {
         this.semaphore = new Semaphore(properties.getConcurrency());
         this.executorService = Executors.newFixedThreadPool(properties.getConcurrency());
+        
+        // Create a scheduler for heartbeats (pool size 2-4 is usually plenty)
+        this.heartbeatScheduler = Executors.newScheduledThreadPool(2);
         
         // Discover which job types this worker can handle
         this.supportedJobTypes = routingEngine.getRegisteredJobTypes();
@@ -123,6 +129,19 @@ public class BackgroundWorker {
         Instant executionStart = Instant.now();
         String status = "FAILED";
         
+        // START HEARTBEAT
+        // Pulse every 30 seconds (adjust based on your Reaper threshold)
+        ScheduledFuture<?> heartbeat = heartbeatScheduler.scheduleAtFixedRate(
+            () -> {
+                try {
+                    jobClaimService.updateHeartbeat(job.getId());
+                } catch (Exception e) {
+                    log.warn("Failed to pulse heartbeat for job {}", job.getId());
+                }
+            }, 
+            30, 30, TimeUnit.SECONDS
+        );
+        
         try {
             // Set job context for parent-child tracking
             JobContextHolder.setCurrentJobId(job.getId());
@@ -176,6 +195,9 @@ public class BackgroundWorker {
             metricsService.recordJobCompleted(job.getJobType(), job.getQueueName(), status);
             
         } finally {
+            // STOP HEARTBEAT
+            heartbeat.cancel(false); // false = don't interrupt the update if it's running
+            
             Duration executionDuration = Duration.between(executionStart, Instant.now());
             metricsService.recordExecutionTime(job.getJobType(), status, executionDuration);
             
@@ -223,6 +245,11 @@ public class BackgroundWorker {
             log.error("Shutdown interrupted. Forcing shutdown.", e);
             executorService.shutdownNow();
             Thread.currentThread().interrupt();
+        }
+        
+        // Shutdown heartbeat scheduler
+        if (heartbeatScheduler != null) {
+            heartbeatScheduler.shutdownNow();
         }
     }
 }

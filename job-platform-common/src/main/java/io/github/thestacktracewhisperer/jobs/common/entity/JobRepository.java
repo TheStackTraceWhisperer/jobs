@@ -1,6 +1,7 @@
 package io.github.thestacktracewhisperer.jobs.common.entity;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -101,4 +102,15 @@ public interface JobRepository extends JpaRepository<JobEntity, UUID> {
         GROUP BY j.queueName
         """)
     List<Object[]> getQueueStatisticsNative();
+
+    /**
+     * Updates the heartbeat timestamp for a running job.
+     * Used by workers to signal they are still processing the job.
+     * 
+     * @param id the job ID
+     * @param heartbeat the heartbeat timestamp
+     */
+    @Modifying
+    @Query("UPDATE JobEntity j SET j.lastHeartbeat = :heartbeat WHERE j.id = :id")
+    void updateLastHeartbeat(@Param("id") UUID id, @Param("heartbeat") Instant heartbeat);
 }

@@ -155,4 +155,14 @@ public class JobClaimService {
             throw e;
         }
     }
+
+    /**
+     * Updates the heartbeat timestamp for a running job.
+     * Uses a new transaction to ensure immediate commit.
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void updateHeartbeat(java.util.UUID jobId) {
+        // Direct update query is more efficient than loading the entity
+        jobRepository.updateLastHeartbeat(jobId, Instant.now());
+    }
 }
