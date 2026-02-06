@@ -169,7 +169,8 @@ class OrchestrationEndToEndTest {
         }
         
         // STEP 2: Wait for background worker to process jobs
-        // Worker polls every 100ms, give it time to pick up and start processing all 3 jobs
+        // Worker polls every 100ms (configured in application-orchestration.properties)
+        // 500ms provides ample time for the worker to pick up and process all 3 jobs (5 poll cycles)
         Thread.sleep(500);
         
         // STEP 3: Verify first job completed successfully
