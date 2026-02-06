@@ -121,6 +121,10 @@ public class JobController {
 
 ### Fan-Out Pattern (Monthly Reports)
 
+The fan-out pattern demonstrates splitting a large job into multiple child jobs that can be processed in parallel. The example below shows generating a monthly report by processing each user's data separately.
+
+**Step 1: Split the job (ReportSplitterHandler)**
+
 ```java
 @Component
 public class ReportSplitterHandler implements JobHandler<GenerateMonthlyReportJob> {
@@ -129,45 +133,77 @@ public class ReportSplitterHandler implements JobHandler<GenerateMonthlyReportJo
     
     @Override
     public void handle(GenerateMonthlyReportJob job) throws Exception {
-        // Enqueue one job per user
+        // Enqueue one job per user - these will share the same parentJobId
         userRepo.streamActiveUserIds().forEach(userId -> {
             enqueuer.enqueue(new UserReportJob(job.reportId(), userId));
         });
         
-        // Enqueue finalization job
+        // Enqueue finalization job - will also share the same parentJobId
         enqueuer.enqueue(new FinalizeReportJob(job.reportId()));
+    }
+}
+```
+
+**Step 2: Finalize only after all child jobs complete (FinalizationJobHandler)**
+
+The finalization job uses the **snooze pattern** to wait for all sibling jobs to complete before proceeding:
+
+```java
+@Component
+public class FinalizeReportHandler implements JobHandler<FinalizeReportJob> {
+    private final JobRepository jobRepository;
+    private final ReportService reportService;
+    
+    @Override
+    public void handle(FinalizeReportJob job) throws Exception {
+        // Get current job's parent to find sibling jobs
+        UUID currentJobId = JobContextHolder.getCurrentJobId();
+        var currentJob = jobRepository.findById(currentJobId).orElseThrow();
+        UUID parentJobId = currentJob.getParentJobId();
+        
+        // Count pending sibling jobs (same parent, different job)
+        long pending = jobRepository.countByStatusAndParentJobId(
+            JobStatus.QUEUED, parentJobId
+        ) + jobRepository.countByStatusAndParentJobId(
+            JobStatus.PROCESSING, parentJobId
+        ) - 1; // Subtract this finalization job itself
+        
+        if (pending > 0) {
+            // Defer execution for 30 seconds without incrementing retry counter
+            throw new JobSnoozeException(
+                "Waiting for " + pending + " user report(s) to complete",
+                Duration.ofSeconds(30)
+            );
+        }
+        
+        // All sibling jobs complete - finalize the report
+        reportService.finalizeReport(job.reportId());
     }
 }
 ```
 
 ### Job Snooze Pattern (Self-Deferral)
 
-Jobs can defer execution without incrementing the retry counter:
+Jobs can defer execution without incrementing the retry counter by throwing a `JobSnoozeException`. This is useful for jobs that need to wait for dependencies or external conditions:
 
 ```java
 @Component
-public class FinalizeReportHandler implements JobHandler<FinalizeReportJob> {
-    private final JobRepository jobRepository;
+public class DataSyncHandler implements JobHandler<DataSyncJob> {
+    private final ExternalApiClient apiClient;
     
     @Override
-    public void handle(FinalizeReportJob job) throws Exception {
-        // Check if dependent jobs are complete
-        long pending = jobRepository.countByStatusAndBatchId(
-            JobStatus.QUEUED, job.reportId()
-        ) + jobRepository.countByStatusAndBatchId(
-            JobStatus.PROCESSING, job.reportId()
-        );
-        
-        if (pending > 0) {
-            // Defer execution for 30 seconds
+    public void handle(DataSyncJob job) throws Exception {
+        // Check if external system is ready
+        if (!apiClient.isReady()) {
+            // Defer execution for 1 minute
             throw new JobSnoozeException(
-                "Waiting for " + pending + " sub-tasks",
-                Duration.ofSeconds(30)
+                "External API not ready",
+                Duration.ofMinutes(1)
             );
         }
         
-        // All dependencies complete
-        generateFinalReport(job.reportId());
+        // System is ready - proceed with sync
+        apiClient.syncData(job.dataId());
     }
 }
 ```

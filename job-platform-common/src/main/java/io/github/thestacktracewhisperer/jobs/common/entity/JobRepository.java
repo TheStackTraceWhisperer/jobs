@@ -80,6 +80,16 @@ public interface JobRepository extends JpaRepository<JobEntity, UUID> {
     long countByStatus(JobStatus status);
 
     /**
+     * Count jobs by status and parent job ID.
+     * Useful for fan-out patterns to track completion of child jobs.
+     * 
+     * @param status the job status
+     * @param parentJobId the parent job ID
+     * @return count of jobs
+     */
+    long countByStatusAndParentJobId(JobStatus status, UUID parentJobId);
+
+    /**
      * Get aggregated queue statistics for all queues.
      * Returns count of QUEUED jobs and age of oldest job per queue.
      * Uses native query for better database compatibility.
