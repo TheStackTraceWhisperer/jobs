@@ -48,7 +48,7 @@ This implementation delivers a complete enterprise-grade distributed job orchest
 - **Code Review**: All feedback addressed
   - ExecutorService for thread management
   - Specific exception handling
-  - Documentation consistency (Java 17)
+  - Documentation consistency (Java 21)
 - **Security Scan**: CodeQL analysis passed with 0 vulnerabilities
 - **Build**: Maven clean verify passes successfully
 
@@ -64,13 +64,14 @@ This implementation delivers a complete enterprise-grade distributed job orchest
 
 ## Technical Adjustments
 
-1. **Java Version**: Adjusted to Java 17 (from Java 21) for environment compatibility
-   - Sealed classes and records still work perfectly
-   - Pattern matching features available
+1. **Java Version**: Updated to Java 21 (LTS)
+   - Full support for sealed classes and records
+   - Enhanced pattern matching features
+   - Virtual threads available (if needed)
 
-2. **ErrorProne**: Disabled due to Java 17 compatibility issues
-   - Would work with Java 21
-   - Not critical for functionality
+2. **MSSQL JDBC Driver**: Using 12.10.2.jre11 variant
+   - The jre11 variant is compatible with Java 21
+   - No jre17 or jre21 variants are available for this version
 
 3. **JaCoCo**: Skipped for reference-app module
    - Appropriate as it's example code

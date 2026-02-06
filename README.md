@@ -1,6 +1,6 @@
 # Enterprise Distributed Job Orchestration Platform
 
-A high-performance, FOSS (Free and Open Source Software) distributed background job system built with Java 17, Spring Boot 3.4+, and MSSQL Server.
+A high-performance, FOSS (Free and Open Source Software) distributed background job system built with Java 21, Spring Boot 3.4+, and MSSQL Server.
 
 ## Features
 
@@ -29,7 +29,7 @@ job-platform-parent/
 
 ### Prerequisites
 
-- Java 17 (LTS)
+- Java 21 (LTS)
 - Maven 3.9+
 - Docker & Docker Compose
 
@@ -194,7 +194,7 @@ Integration tests use Testcontainers to spin up an MSSQL instance automatically.
 
 ## Technology Stack
 
-- **Java 17** - Utilizing Records, Sealed Classes, Pattern Matching
+- **Java 21** - Utilizing Records, Sealed Classes, Pattern Matching
 - **Spring Boot 3.4+** - Application framework
 - **MSSQL Server 2019/2022** - Persistent storage
 - **Maven 3.9+** - Build tool
