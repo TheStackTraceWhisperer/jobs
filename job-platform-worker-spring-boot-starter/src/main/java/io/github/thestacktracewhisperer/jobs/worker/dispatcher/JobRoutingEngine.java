@@ -29,14 +29,6 @@ public class JobRoutingEngine {
     private final ObjectMapper objectMapper;
     private final Map<String, JobHandler<?>> handlerRegistry = new HashMap<>();
 
-<<<<<<< HEAD
-=======
-    public JobRoutingEngine(ObjectProvider<JobHandler<?>> handlersProvider, ObjectMapper objectMapper) {
-        this.handlersProvider = handlersProvider;
-        this.objectMapper = objectMapper;
-    }
-
->>>>>>> 244cabb586257ad619d7984996f49dafff271b53
     /**
      * Uses ObjectProvider to discover all JobHandler beans and builds a registry.
      */
