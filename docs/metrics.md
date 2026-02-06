@@ -19,7 +19,6 @@ These counters answer: **"How much work are we doing?"**
 | `jobs.enqueued.total` | Counter | `job_type`, `queue` | Total jobs pushed to the database. Correlates with API traffic. |
 | `jobs.started.total` | Counter | `job_type`, `queue` | Number of jobs picked up by the poller and handed to a thread. |
 | `jobs.completed.total` | Counter | `job_type`, `queue`, `status` | Jobs completed. Status: `SUCCESS`, `FAILED`, `PERMANENTLY_FAILED`, `SNOOZED` |
-| `jobs.saga.compensations.total` | Counter | `job_type` | Number of times a Saga triggered its "Undo" workflow (future feature). |
 
 ### Example Queries
 ```promql

@@ -60,16 +60,6 @@ public class JobMetricsService {
             .increment();
     }
 
-    /**
-     * Records saga compensation execution (undo workflow).
-     */
-    public void recordSagaCompensation(String jobType) {
-        getCounter("jobs.saga.compensations.total",
-            "Number of times a Saga triggered its Undo workflow",
-            Tags.of("job_type", jobType))
-            .increment();
-    }
-
     // ============================================================================
     // LATENCY & PERFORMANCE METRICS (Timers)
     // ============================================================================

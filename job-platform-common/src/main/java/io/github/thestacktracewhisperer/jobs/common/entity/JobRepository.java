@@ -83,12 +83,13 @@ public interface JobRepository extends JpaRepository<JobEntity, UUID> {
      * Get aggregated queue statistics for all queues.
      * Returns count of QUEUED jobs and age of oldest job per queue.
      * Uses native query for better database compatibility.
+     * Optimized to use COUNT(queue_name) instead of COUNT(*) for better performance.
      * 
      * @return list of queue statistics
      */
     @Query(value = """
         SELECT queue_name as queueName, 
-               COUNT(*) as queuedCount,
+               COUNT(queue_name) as queuedCount,
                MAX(DATEDIFF(SECOND, created_at, GETDATE())) as oldestJobAgeSeconds
         FROM background_jobs
         WHERE status = 'QUEUED'
