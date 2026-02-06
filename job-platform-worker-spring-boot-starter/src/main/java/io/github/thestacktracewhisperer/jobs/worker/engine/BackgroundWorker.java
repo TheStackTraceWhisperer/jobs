@@ -38,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 public class BackgroundWorker {
 
     private static final Logger log = LoggerFactory.getLogger(BackgroundWorker.class);
+    private static final int FORCED_SHUTDOWN_TIMEOUT_SECONDS = 5;
 
     private final JobRepository jobRepository;
     private final JobRoutingEngine routingEngine;
@@ -207,7 +208,7 @@ public class BackgroundWorker {
                 executorService.shutdownNow();
                 
                 // Wait a bit more for forced shutdown
-                if (executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                if (executorService.awaitTermination(FORCED_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
                     log.info("Executor service forcefully shut down");
                 } else {
                     log.error("Executor service did not terminate after forced shutdown");
