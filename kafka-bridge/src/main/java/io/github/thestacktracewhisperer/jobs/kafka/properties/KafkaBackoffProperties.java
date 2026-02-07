@@ -2,13 +2,11 @@ package io.github.thestacktracewhisperer.jobs.kafka.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 /**
  * Configuration properties for Kafka consumer backoff behavior.
  */
 @Data
-@Component
 @ConfigurationProperties(prefix = "kafka.consumer.backoff")
 public class KafkaBackoffProperties {
     

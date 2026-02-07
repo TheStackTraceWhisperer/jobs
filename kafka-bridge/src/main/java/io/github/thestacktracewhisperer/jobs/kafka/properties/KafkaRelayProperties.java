@@ -2,13 +2,11 @@ package io.github.thestacktracewhisperer.jobs.kafka.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 /**
  * Configuration properties for the Kafka relay handler.
  */
 @Data
-@Component
 @ConfigurationProperties(prefix = "kafka.relay")
 public class KafkaRelayProperties {
     

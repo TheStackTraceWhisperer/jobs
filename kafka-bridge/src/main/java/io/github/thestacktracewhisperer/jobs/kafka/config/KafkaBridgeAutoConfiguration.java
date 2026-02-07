@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
@@ -40,6 +41,7 @@ import java.util.Map;
 @ConditionalOnClass(KafkaTemplate.class)
 @EnableKafka
 @EnableConfigurationProperties({KafkaBackoffProperties.class, KafkaRelayProperties.class})
+@ComponentScan(basePackages = "io.github.thestacktracewhisperer.jobs.kafka")
 @RequiredArgsConstructor
 public class KafkaBridgeAutoConfiguration {
 
