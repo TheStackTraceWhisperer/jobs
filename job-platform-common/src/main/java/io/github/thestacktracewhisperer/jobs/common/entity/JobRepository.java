@@ -33,7 +33,7 @@ public interface JobRepository extends JpaRepository<JobEntity, UUID> {
           AND j.queueName = :queueName
           AND j.runAt <= :runAt
           AND j.jobType IN :supportedTypes
-        ORDER BY j.runAt ASC
+        ORDER BY j.priority DESC, j.runAt ASC
         """)
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     org.springframework.data.domain.Page<JobEntity> findJobsReadyForProcessing(

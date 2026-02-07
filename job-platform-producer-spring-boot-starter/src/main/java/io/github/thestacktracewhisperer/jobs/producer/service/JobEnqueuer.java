@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -62,6 +64,9 @@ public class JobEnqueuer {
             // Create job entity
             JobEntity entity = new JobEntity(queueName, jobType, payload);
             
+            // Set priority from job
+            entity.setPriority(job.priority());
+            
             if (runAt != null) {
                 entity.setRunAt(runAt);
             }
@@ -102,6 +107,87 @@ public class JobEnqueuer {
         } catch (Exception e) {
             throw new JobSerializationException(
                 "Failed to serialize job: " + jobType, e);
+        }
+    }
+    
+    /**
+     * Enqueues multiple jobs in a single transaction.
+     * All jobs will share the same parent job ID and trace ID context.
+     * 
+     * @param jobs the list of jobs to enqueue
+     * @return the list of persisted job entities
+     */
+    @Transactional
+    public List<JobEntity> enqueue(List<? extends Job> jobs) {
+        if (jobs == null || jobs.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        Instant enqueueStart = Instant.now();
+        
+        // Capture context once for the entire batch
+        String traceId = MDC.get(MDC_TRACE_ID_KEY);
+        UUID traceIdUuid = null;
+        if (traceId != null) {
+            try {
+                traceIdUuid = UUID.fromString(traceId);
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid trace ID format in MDC: {}", traceId);
+            }
+        }
+        
+        UUID parentJobId = JobContextHolder.hasCurrentJobId() 
+            ? JobContextHolder.getCurrentJobId() 
+            : null;
+        
+        List<JobEntity> entities = new ArrayList<>(jobs.size());
+        
+        try {
+            for (Job job : jobs) {
+                String jobType = job.getClass().getName();
+                String payload = objectMapper.writeValueAsString(job);
+                String queueName = job.queueName();
+                
+                JobEntity entity = new JobEntity(queueName, jobType, payload);
+                entity.setPriority(job.priority());
+                
+                // Apply shared context to every entity
+                if (traceIdUuid != null) {
+                    entity.setTraceId(traceIdUuid);
+                }
+                if (parentJobId != null) {
+                    entity.setParentJobId(parentJobId);
+                }
+                
+                entities.add(entity);
+            }
+            
+            // Save all entities in one batch
+            List<JobEntity> savedEntities = jobRepository.saveAll(entities);
+            
+            // Record metrics - wrap in try-catch to prevent transaction rollback
+            try {
+                Duration enqueueDuration = Duration.between(enqueueStart, Instant.now());
+                
+                // Record individual job metrics
+                for (JobEntity entity : savedEntities) {
+                    metricsService.recordEnqueueTime(entity.getJobType(), enqueueDuration);
+                    metricsService.recordJobEnqueued(entity.getJobType(), entity.getQueueName());
+                }
+                
+                // Record batch size metric
+                metricsService.recordBatchSize(savedEntities.size());
+            } catch (Exception e) {
+                log.warn("Failed to record metrics for batch enqueue", e);
+            }
+            
+            log.info("Enqueued {} jobs in batch", savedEntities.size());
+            
+            return savedEntities;
+            
+        } catch (Exception e) {
+            throw new JobSerializationException(
+                "Failed to serialize jobs in batch", e);
         }
     }
 }

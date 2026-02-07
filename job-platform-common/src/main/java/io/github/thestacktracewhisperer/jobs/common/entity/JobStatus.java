@@ -27,5 +27,10 @@ public enum JobStatus {
     /**
      * Job permanently failed after exhausting all retries.
      */
-    PERMANENTLY_FAILED
+    PERMANENTLY_FAILED,
+    
+    /**
+     * Job was cancelled and will not be processed.
+     */
+    CANCELLED
 }
