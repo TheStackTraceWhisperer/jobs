@@ -77,7 +77,7 @@ public class LegacyOrderIngestor {
             // If enqueue throws, this line is skipped, Kafka redelivers.
             ack.acknowledge();
             
-            log.info("Successfully ingested order event: orderId={}, jobId created", event.getOrderId());
+            log.info("Successfully ingested order event: orderId={}", event.getOrderId());
 
         } catch (JsonProcessingException e) {
             // POISON PILL STRATEGY
