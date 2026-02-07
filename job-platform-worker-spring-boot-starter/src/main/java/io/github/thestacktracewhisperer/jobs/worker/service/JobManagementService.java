@@ -44,11 +44,14 @@ public class JobManagementService {
                 "Cannot cancel job in terminal state: " + job.getStatus());
         }
         
+        // Capture status before modification for logging
+        JobStatus previousStatus = job.getStatus();
+        
         // Cancel the job
         job.setStatus(JobStatus.CANCELLED);
         jobRepository.save(job);
         
-        log.info("Cancelled job: id={}, previousStatus={}", jobId, job.getStatus());
+        log.info("Cancelled job: id={}, previousStatus={}", jobId, previousStatus);
     }
 
     /**
