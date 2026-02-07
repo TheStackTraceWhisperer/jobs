@@ -1,6 +1,7 @@
 package io.github.thestacktracewhisperer.jobs.common.metrics;
 
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
@@ -25,6 +26,7 @@ public class JobMetricsService {
     // Cache for counters to avoid recreating them
     private final ConcurrentHashMap<String, Counter> counterCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Timer> timerCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, DistributionSummary> distributionCache = new ConcurrentHashMap<>();
 
     // ============================================================================
     // TRAFFIC & THROUGHPUT METRICS (Counters)
@@ -102,6 +104,16 @@ public class JobMetricsService {
             "Time to serialize and INSERT job",
             Tags.of("job_type", jobType))
             .record(enqueueTime);
+    }
+    
+    /**
+     * Records batch enqueue size for bulk operations.
+     */
+    public void recordBatchSize(int batchSize) {
+        getDistributionSummary("jobs.enqueue.batch.size",
+            "Number of jobs enqueued in a batch operation",
+            Tags.empty())
+            .record(batchSize);
     }
 
     // ============================================================================
@@ -223,6 +235,16 @@ public class JobMetricsService {
         String cacheKey = name + tags.toString();
         return timerCache.computeIfAbsent(cacheKey, k ->
             Timer.builder(name)
+                .description(description)
+                .tags(tags)
+                .register(meterRegistry)
+        );
+    }
+    
+    private DistributionSummary getDistributionSummary(String name, String description, Tags tags) {
+        String cacheKey = name + tags.toString();
+        return distributionCache.computeIfAbsent(cacheKey, k ->
+            DistributionSummary.builder(name)
                 .description(description)
                 .tags(tags)
                 .register(meterRegistry)

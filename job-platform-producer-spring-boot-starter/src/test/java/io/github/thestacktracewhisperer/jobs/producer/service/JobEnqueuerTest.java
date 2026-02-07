@@ -17,6 +17,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -293,5 +296,181 @@ class JobEnqueuerTest {
         assertNotNull(result);
         assertEquals(savedEntity.getId(), result.getId());
         verify(jobRepository).save(any(JobEntity.class));
+    }
+    
+    // ============================================================================
+    // BULK ENQUEUE TESTS
+    // ============================================================================
+    
+    @Test
+    void testBulkEnqueue() throws Exception {
+        List<Job> jobs = Arrays.asList(
+            new TestJob("job1"),
+            new TestJob("job2"),
+            new TestJob("job3")
+        );
+        
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        
+        List<JobEntity> savedEntities = Arrays.asList(
+            createJobEntity("job1"),
+            createJobEntity("job2"),
+            createJobEntity("job3")
+        );
+        
+        when(jobRepository.saveAll(anyList())).thenReturn(savedEntities);
+        
+        List<JobEntity> result = jobEnqueuer.enqueue(jobs);
+        
+        assertNotNull(result);
+        assertEquals(3, result.size());
+        
+        verify(jobRepository).saveAll(anyList());
+        verify(metricsService, times(3)).recordEnqueueTime(eq(TestJob.class.getName()), any());
+        verify(metricsService, times(3)).recordJobEnqueued(eq(TestJob.class.getName()), eq("DEFAULT"));
+        verify(metricsService).recordBatchSize(3);
+    }
+    
+    @Test
+    void testBulkEnqueueWithEmptyList() {
+        List<Job> jobs = new ArrayList<>();
+        
+        List<JobEntity> result = jobEnqueuer.enqueue(jobs);
+        
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        
+        verify(jobRepository, never()).saveAll(any());
+        verify(metricsService, never()).recordBatchSize(anyInt());
+    }
+    
+    @Test
+    void testBulkEnqueueWithNullList() {
+        List<JobEntity> result = jobEnqueuer.enqueue((List<Job>) null);
+        
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        
+        verify(jobRepository, never()).saveAll(any());
+    }
+    
+    @Test
+    void testBulkEnqueueCapturesParentJobId() throws Exception {
+        UUID parentJobId = UUID.randomUUID();
+        JobContextHolder.setCurrentJobId(parentJobId);
+        
+        List<Job> jobs = Arrays.asList(
+            new TestJob("job1"),
+            new TestJob("job2")
+        );
+        
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        
+        ArgumentCaptor<List<JobEntity>> captor = ArgumentCaptor.forClass(List.class);
+        when(jobRepository.saveAll(captor.capture())).thenReturn(new ArrayList<>());
+        
+        jobEnqueuer.enqueue(jobs);
+        
+        List<JobEntity> capturedEntities = captor.getValue();
+        assertEquals(2, capturedEntities.size());
+        
+        for (JobEntity entity : capturedEntities) {
+            assertEquals(parentJobId, entity.getParentJobId());
+        }
+    }
+    
+    @Test
+    void testBulkEnqueueCapturesMDCTraceId() throws Exception {
+        UUID traceId = UUID.randomUUID();
+        MDC.put("traceId", traceId.toString());
+        
+        List<Job> jobs = Arrays.asList(
+            new TestJob("job1"),
+            new TestJob("job2")
+        );
+        
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        
+        ArgumentCaptor<List<JobEntity>> captor = ArgumentCaptor.forClass(List.class);
+        when(jobRepository.saveAll(captor.capture())).thenReturn(new ArrayList<>());
+        
+        jobEnqueuer.enqueue(jobs);
+        
+        List<JobEntity> capturedEntities = captor.getValue();
+        assertEquals(2, capturedEntities.size());
+        
+        for (JobEntity entity : capturedEntities) {
+            assertEquals(traceId, entity.getTraceId());
+        }
+    }
+    
+    @Test
+    void testBulkEnqueueThrowsSerializationException() throws Exception {
+        List<Job> jobs = Arrays.asList(
+            new TestJob("job1"),
+            new TestJob("job2")
+        );
+        
+        when(objectMapper.writeValueAsString(any()))
+            .thenThrow(new com.fasterxml.jackson.core.JsonProcessingException("JSON error") {});
+        
+        assertThrows(JobSerializationException.class, () -> {
+            jobEnqueuer.enqueue(jobs);
+        });
+        
+        verify(jobRepository, never()).saveAll(any());
+    }
+    
+    // ============================================================================
+    // PRIORITY TESTS
+    // ============================================================================
+    
+    private static class HighPriorityJob implements Job {
+        @Override
+        public int priority() {
+            return 10;
+        }
+    }
+    
+    @Test
+    void testEnqueueWithPriority() throws Exception {
+        HighPriorityJob job = new HighPriorityJob();
+        String payload = "{}";
+        JobEntity savedEntity = new JobEntity("DEFAULT", HighPriorityJob.class.getName(), payload);
+        
+        when(objectMapper.writeValueAsString(job)).thenReturn(payload);
+        when(jobRepository.save(any(JobEntity.class))).thenReturn(savedEntity);
+        
+        jobEnqueuer.enqueue(job);
+        
+        ArgumentCaptor<JobEntity> entityCaptor = ArgumentCaptor.forClass(JobEntity.class);
+        verify(jobRepository).save(entityCaptor.capture());
+        
+        JobEntity capturedEntity = entityCaptor.getValue();
+        assertEquals(10, capturedEntity.getPriority());
+    }
+    
+    @Test
+    void testEnqueueWithDefaultPriority() throws Exception {
+        TestJob job = new TestJob("test");
+        String payload = "{}";
+        JobEntity savedEntity = new JobEntity("DEFAULT", TestJob.class.getName(), payload);
+        
+        when(objectMapper.writeValueAsString(job)).thenReturn(payload);
+        when(jobRepository.save(any(JobEntity.class))).thenReturn(savedEntity);
+        
+        jobEnqueuer.enqueue(job);
+        
+        ArgumentCaptor<JobEntity> entityCaptor = ArgumentCaptor.forClass(JobEntity.class);
+        verify(jobRepository).save(entityCaptor.capture());
+        
+        JobEntity capturedEntity = entityCaptor.getValue();
+        assertEquals(0, capturedEntity.getPriority());
+    }
+    
+    private JobEntity createJobEntity(String data) {
+        JobEntity entity = new JobEntity("DEFAULT", TestJob.class.getName(), "{}");
+        entity.setId(UUID.randomUUID());
+        return entity;
     }
 }

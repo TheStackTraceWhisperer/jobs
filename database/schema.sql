@@ -32,16 +32,27 @@ BEGIN
         
         -- Audit
         created_at DATETIME2 DEFAULT SYSUTCDATETIME(),
-        last_error NVARCHAR(MAX) NULL
+        last_error NVARCHAR(MAX) NULL,
+        
+        -- Priority (higher numbers = higher priority)
+        priority INT NOT NULL DEFAULT 0
     );
 END
 GO
 
--- Critical Index for Polling Performance
+-- Critical Index for Polling Performance (includes priority for efficient polling)
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_jobs_polling' AND object_id = OBJECT_ID('background_jobs'))
 BEGIN
     CREATE INDEX idx_jobs_polling 
-    ON background_jobs (status, queue_name, run_at) 
+    ON background_jobs (status, queue_name, priority DESC, run_at ASC) 
+    INCLUDE (version, attempts);
+END
+ELSE
+BEGIN
+    -- Drop and recreate index if it exists to update column order
+    DROP INDEX idx_jobs_polling ON background_jobs;
+    CREATE INDEX idx_jobs_polling 
+    ON background_jobs (status, queue_name, priority DESC, run_at ASC) 
     INCLUDE (version, attempts);
 END
 GO

@@ -10,14 +10,15 @@ class JobStatusTest {
     void testEnumValues() {
         JobStatus[] statuses = JobStatus.values();
         
-        assertEquals(5, statuses.length);
+        assertEquals(6, statuses.length);
         assertArrayEquals(
             new JobStatus[]{
                 JobStatus.QUEUED,
                 JobStatus.PROCESSING,
                 JobStatus.SUCCESS,
                 JobStatus.FAILED,
-                JobStatus.PERMANENTLY_FAILED
+                JobStatus.PERMANENTLY_FAILED,
+                JobStatus.CANCELLED
             },
             statuses
         );
@@ -30,6 +31,7 @@ class JobStatusTest {
         assertEquals(JobStatus.SUCCESS, JobStatus.valueOf("SUCCESS"));
         assertEquals(JobStatus.FAILED, JobStatus.valueOf("FAILED"));
         assertEquals(JobStatus.PERMANENTLY_FAILED, JobStatus.valueOf("PERMANENTLY_FAILED"));
+        assertEquals(JobStatus.CANCELLED, JobStatus.valueOf("CANCELLED"));
     }
 
     @Test
@@ -56,5 +58,6 @@ class JobStatusTest {
         assertEquals(2, JobStatus.SUCCESS.ordinal());
         assertEquals(3, JobStatus.FAILED.ordinal());
         assertEquals(4, JobStatus.PERMANENTLY_FAILED.ordinal());
+        assertEquals(5, JobStatus.CANCELLED.ordinal());
     }
 }

@@ -14,7 +14,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "background_jobs", indexes = {
-    @Index(name = "idx_jobs_polling", columnList = "status,queue_name,run_at,version,attempts"),
+    @Index(name = "idx_jobs_polling", columnList = "status,queue_name,priority,run_at,version,attempts"),
     @Index(name = "idx_jobs_heartbeat", columnList = "status,last_heartbeat")
 })
 @Getter
@@ -45,6 +45,9 @@ public class JobEntity {
 
     @Column(name = "attempts", nullable = false)
     private int attempts = 0;
+    
+    @Column(name = "priority", nullable = false)
+    private int priority = 0;
 
     @NotNull
     @Column(name = "run_at", nullable = false)

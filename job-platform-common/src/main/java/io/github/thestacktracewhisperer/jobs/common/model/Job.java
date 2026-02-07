@@ -13,4 +13,13 @@ public interface Job {
     default String queueName() {
         return "DEFAULT";
     }
+    
+    /**
+     * Returns the priority of this job.
+     * Higher numbers indicate higher priority.
+     * @return the priority, defaults to 0
+     */
+    default int priority() {
+        return 0;
+    }
 }
