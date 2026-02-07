@@ -57,11 +57,12 @@ The `KafkaRelayHandler` uses these defaults:
 
 To configure ordering:
 ```yaml
-jobs:
-  worker:
-    queues:
-      KAFKA_RELAY:
-        concurrency: 1  # Strict ordering (see ADR-004 Risk Assessment)
+platform:
+  jobs:
+    worker:
+      queues:
+        KAFKA_RELAY:
+          concurrency: 1  # Strict ordering (see ADR-004 Risk Assessment)
 ```
 
 ## Inbound Bridge (Consuming from Kafka)
