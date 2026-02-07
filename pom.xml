@@ -17,6 +17,8 @@
         <module>job-platform-common</module>
         <module>job-platform-producer-spring-boot-starter</module>
         <module>job-platform-worker-spring-boot-starter</module>
+        <module>product-shared-api</module>
+        <module>kafka-bridge</module>
         <module>reference-app</module>
     </modules>
 
@@ -70,6 +72,16 @@
             <dependency>
                 <groupId>io.github.thestacktracewhisperer</groupId>
                 <artifactId>job-platform-worker-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.thestacktracewhisperer</groupId>
+                <artifactId>product-shared-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.thestacktracewhisperer</groupId>
+                <artifactId>kafka-bridge</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
