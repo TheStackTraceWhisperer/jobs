@@ -3,6 +3,7 @@ package io.github.thestacktracewhisperer.jobs.ui.service;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobEntity;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobRepository;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobStatus;
+import io.github.thestacktracewhisperer.jobs.ui.exception.JobNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,7 +40,7 @@ public class JobService {
         }
 
         if (jobType != null && !jobType.isBlank()) {
-            spec = spec.and((root, query, cb) -> cb.like(root.get("jobType"), "%" + jobType + "%"));
+            spec = spec.and((root, query, cb) -> cb.like(root.get("jobType"), jobType + "%"));
         }
 
         return jobRepository.findAll(spec, pageable);
@@ -59,7 +60,7 @@ public class JobService {
     @Transactional
     public void requeue(UUID id) {
         JobEntity job = jobRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Job not found: " + id));
+                .orElseThrow(() -> new JobNotFoundException("Job not found: " + id));
         
         job.setStatus(JobStatus.QUEUED);
         job.setRunAt(Instant.now());
@@ -72,7 +73,7 @@ public class JobService {
     @Transactional
     public void cancel(UUID id) {
         JobEntity job = jobRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Job not found: " + id));
+                .orElseThrow(() -> new JobNotFoundException("Job not found: " + id));
         
         job.setStatus(JobStatus.CANCELLED);
         jobRepository.save(job);
@@ -83,6 +84,9 @@ public class JobService {
      */
     @Transactional
     public void delete(UUID id) {
+        if (!jobRepository.existsById(id)) {
+            throw new JobNotFoundException("Job not found: " + id);
+        }
         jobRepository.deleteById(id);
     }
 }

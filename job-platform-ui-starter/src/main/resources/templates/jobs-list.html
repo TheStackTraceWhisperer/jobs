@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Job Platform - Jobs</title>
     <link rel="stylesheet" th:href="@{/css/styles.css}">
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js" 
+            integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" 
+            crossorigin="anonymous"></script>
 </head>
 <body>
     <div class="container">
@@ -14,7 +16,7 @@
         </header>
 
         <div class="filters">
-            <form method="get" action="/jobs" class="filter-form">
+            <form method="get" th:action="@{/jobs}" class="filter-form">
                 <div class="filter-group">
                     <label for="status">Status:</label>
                     <select id="status" name="status" class="filter-select">
@@ -43,7 +45,7 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary">Filter</button>
-                <a href="/jobs" class="btn btn-secondary">Clear</a>
+                <a th:href="@{/jobs}" class="btn btn-secondary">Clear</a>
             </form>
         </div>
 
@@ -114,7 +116,7 @@
 
         <div class="pagination" th:if="${totalPages > 1}">
             <a th:if="${currentPage > 0}" 
-               th:href="@{/jobs(page=${currentPage - 1}, size=20, status=${selectedStatus}, queueName=${selectedQueueName}, jobType=${selectedJobType})}"
+               th:href="@{/jobs(page=${currentPage - 1}, size=${currentSize}, status=${selectedStatus}, queueName=${selectedQueueName}, jobType=${selectedJobType})}"
                class="btn btn-secondary">Previous</a>
             
             <span class="page-info">
@@ -122,7 +124,7 @@
             </span>
             
             <a th:if="${currentPage + 1 < totalPages}" 
-               th:href="@{/jobs(page=${currentPage + 1}, size=20, status=${selectedStatus}, queueName=${selectedQueueName}, jobType=${selectedJobType})}"
+               th:href="@{/jobs(page=${currentPage + 1}, size=${currentSize}, status=${selectedStatus}, queueName=${selectedQueueName}, jobType=${selectedJobType})}"
                class="btn btn-secondary">Next</a>
         </div>
     </div>

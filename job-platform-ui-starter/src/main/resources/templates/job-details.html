@@ -5,13 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Job Details</title>
     <link rel="stylesheet" th:href="@{/css/styles.css}">
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js" 
+            integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" 
+            crossorigin="anonymous"></script>
 </head>
 <body>
     <div class="container">
         <header class="header">
             <h1>Job Details</h1>
-            <a href="/jobs" class="btn btn-secondary">Back to List</a>
+            <a th:href="@{/jobs}" class="btn btn-secondary">Back to List</a>
         </header>
 
         <div class="job-details">

@@ -2,6 +2,7 @@ package io.github.thestacktracewhisperer.jobs.ui.controller;
 
 import io.github.thestacktracewhisperer.jobs.common.entity.JobEntity;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobStatus;
+import io.github.thestacktracewhisperer.jobs.ui.exception.JobNotFoundException;
 import io.github.thestacktracewhisperer.jobs.ui.service.JobService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -44,6 +45,7 @@ public class JobViewController {
 
         model.addAttribute("jobs", jobs);
         model.addAttribute("currentPage", page);
+        model.addAttribute("currentSize", size);
         model.addAttribute("totalPages", jobs.getTotalPages());
         model.addAttribute("totalElements", jobs.getTotalElements());
         model.addAttribute("selectedStatus", status);
@@ -60,7 +62,7 @@ public class JobViewController {
     @GetMapping("/{id}")
     public String jobDetails(@PathVariable UUID id, Model model) {
         JobEntity job = jobService.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Job not found: " + id));
+                .orElseThrow(() -> new JobNotFoundException("Job not found: " + id));
 
         model.addAttribute("job", job);
         return "job-details";

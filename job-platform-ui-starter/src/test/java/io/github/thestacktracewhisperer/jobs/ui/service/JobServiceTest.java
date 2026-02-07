@@ -3,6 +3,7 @@ package io.github.thestacktracewhisperer.jobs.ui.service;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobEntity;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobRepository;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobStatus;
+import io.github.thestacktracewhisperer.jobs.ui.exception.JobNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,7 +17,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -110,7 +110,7 @@ class JobServiceTest {
         UUID id = UUID.randomUUID();
         when(jobRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> jobService.requeue(id));
+        assertThrows(JobNotFoundException.class, () -> jobService.requeue(id));
     }
 
     @Test
@@ -131,12 +131,13 @@ class JobServiceTest {
         UUID id = UUID.randomUUID();
         when(jobRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> jobService.cancel(id));
+        assertThrows(JobNotFoundException.class, () -> jobService.cancel(id));
     }
 
     @Test
     void delete_shouldCallRepositoryDelete() {
         UUID id = testJob.getId();
+        when(jobRepository.existsById(id)).thenReturn(true);
 
         jobService.delete(id);
 
