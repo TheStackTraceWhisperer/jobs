@@ -81,6 +81,16 @@ public interface JobRepository extends JpaRepository<JobEntity, UUID> {
     long countByStatus(JobStatus status);
 
     /**
+     * Count jobs by status and batch ID (trace ID).
+     * Used to check for pending related jobs in the same batch.
+     * 
+     * @param status the job status
+     * @param batchId the batch ID (trace ID) to filter by
+     * @return count of jobs
+     */
+    long countByStatusAndTraceId(JobStatus status, UUID batchId);
+
+    /**
      * Returns count of QUEUED jobs and creation time of the oldest job per queue.
      * Uses JPQL for better database portability.
      *
