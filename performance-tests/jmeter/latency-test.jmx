@@ -176,19 +176,37 @@
             <intProp name="Assertion.test_type">8</intProp>
           </ResponseAssertion>
           <hashTree/>
-          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="Extract Execution Time P95" enabled="true">
+          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="Extract Execution Time Sum" enabled="true">
             <stringProp name="RegexExtractor.useHeaders">false</stringProp>
-            <stringProp name="RegexExtractor.refname">execution_p95</stringProp>
-            <stringProp name="RegexExtractor.regex">jobs_execution_time_bucket\{.*?le="0\.95".*?\}\s+([\d.]+)</stringProp>
+            <stringProp name="RegexExtractor.refname">execution_time_sum</stringProp>
+            <stringProp name="RegexExtractor.regex">jobs_execution_time_seconds_sum\{.*?\}\s+([\d.]+)</stringProp>
             <stringProp name="RegexExtractor.template">$1$</stringProp>
             <stringProp name="RegexExtractor.default">N/A</stringProp>
             <stringProp name="RegexExtractor.match_number">1</stringProp>
           </RegexExtractor>
           <hashTree/>
-          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="Extract Queue Wait Time P95" enabled="true">
+          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="Extract Execution Time Count" enabled="true">
             <stringProp name="RegexExtractor.useHeaders">false</stringProp>
-            <stringProp name="RegexExtractor.refname">queue_wait_p95</stringProp>
-            <stringProp name="RegexExtractor.regex">jobs_queue_wait_time_bucket\{.*?le="0\.95".*?\}\s+([\d.]+)</stringProp>
+            <stringProp name="RegexExtractor.refname">execution_time_count</stringProp>
+            <stringProp name="RegexExtractor.regex">jobs_execution_time_seconds_count\{.*?\}\s+([\d.]+)</stringProp>
+            <stringProp name="RegexExtractor.template">$1$</stringProp>
+            <stringProp name="RegexExtractor.default">N/A</stringProp>
+            <stringProp name="RegexExtractor.match_number">1</stringProp>
+          </RegexExtractor>
+          <hashTree/>
+          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="Extract Queue Wait Time Sum" enabled="true">
+            <stringProp name="RegexExtractor.useHeaders">false</stringProp>
+            <stringProp name="RegexExtractor.refname">queue_wait_time_sum</stringProp>
+            <stringProp name="RegexExtractor.regex">jobs_queue_wait_time_seconds_sum\{.*?\}\s+([\d.]+)</stringProp>
+            <stringProp name="RegexExtractor.template">$1$</stringProp>
+            <stringProp name="RegexExtractor.default">N/A</stringProp>
+            <stringProp name="RegexExtractor.match_number">1</stringProp>
+          </RegexExtractor>
+          <hashTree/>
+          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="Extract Queue Wait Time Count" enabled="true">
+            <stringProp name="RegexExtractor.useHeaders">false</stringProp>
+            <stringProp name="RegexExtractor.refname">queue_wait_time_count</stringProp>
+            <stringProp name="RegexExtractor.regex">jobs_queue_wait_time_seconds_count\{.*?\}\s+([\d.]+)</stringProp>
             <stringProp name="RegexExtractor.template">$1$</stringProp>
             <stringProp name="RegexExtractor.default">N/A</stringProp>
             <stringProp name="RegexExtractor.match_number">1</stringProp>

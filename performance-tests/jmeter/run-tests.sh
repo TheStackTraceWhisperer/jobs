@@ -66,6 +66,7 @@ check_application() {
 run_throughput_test() {
     local threads="${1:-50}"
     local duration="${2:-300}"
+    local timestamp=$(date +%Y%m%d-%H%M%S)
     
     print_info "Running Throughput Test (threads=$threads, duration=${duration}s)"
     
@@ -74,18 +75,19 @@ run_throughput_test() {
         -Jport="$PORT" \
         -Jthreads="$threads" \
         -Jduration="$duration" \
-        -l "$RESULTS_DIR/throughput-$(date +%Y%m%d-%H%M%S).jtl" \
-        -j "$LOGS_DIR/throughput-$(date +%Y%m%d-%H%M%S).log" \
-        -e -o "$REPORTS_DIR/throughput-$(date +%Y%m%d-%H%M%S)"
+        -l "$RESULTS_DIR/throughput-${timestamp}.jtl" \
+        -j "$LOGS_DIR/throughput-${timestamp}.log" \
+        -e -o "$REPORTS_DIR/throughput-${timestamp}"
     
     print_info "Throughput test completed"
-    print_info "Report available at: $REPORTS_DIR/throughput-$(date +%Y%m%d-%H%M%S)/index.html"
+    print_info "Report available at: $REPORTS_DIR/throughput-${timestamp}/index.html"
 }
 
 # Function to run latency test
 run_latency_test() {
     local threads="${1:-25}"
     local loops="${2:-1000}"
+    local timestamp=$(date +%Y%m%d-%H%M%S)
     
     print_info "Running Latency Test (threads=$threads, loops=$loops)"
     
@@ -94,12 +96,12 @@ run_latency_test() {
         -Jport="$PORT" \
         -Jthreads="$threads" \
         -Jloops="$loops" \
-        -l "$RESULTS_DIR/latency-$(date +%Y%m%d-%H%M%S).jtl" \
-        -j "$LOGS_DIR/latency-$(date +%Y%m%d-%H%M%S).log" \
-        -e -o "$REPORTS_DIR/latency-$(date +%Y%m%d-%H%M%S)"
+        -l "$RESULTS_DIR/latency-${timestamp}.jtl" \
+        -j "$LOGS_DIR/latency-${timestamp}.log" \
+        -e -o "$REPORTS_DIR/latency-${timestamp}"
     
     print_info "Latency test completed"
-    print_info "Report available at: $REPORTS_DIR/latency-$(date +%Y%m%d-%H%M%S)/index.html"
+    print_info "Report available at: $REPORTS_DIR/latency-${timestamp}/index.html"
 }
 
 # Function to run stress test
@@ -107,6 +109,7 @@ run_stress_test() {
     local baseline="${1:-50}"
     local peak="${2:-200}"
     local spike="${3:-500}"
+    local timestamp=$(date +%Y%m%d-%H%M%S)
     
     print_info "Running Stress Test (baseline=$baseline, peak=$peak, spike=$spike)"
     
@@ -116,12 +119,12 @@ run_stress_test() {
         -Jbaseline_threads="$baseline" \
         -Jpeak_threads="$peak" \
         -Jspike_threads="$spike" \
-        -l "$RESULTS_DIR/stress-$(date +%Y%m%d-%H%M%S).jtl" \
-        -j "$LOGS_DIR/stress-$(date +%Y%m%d-%H%M%S).log" \
-        -e -o "$REPORTS_DIR/stress-$(date +%Y%m%d-%H%M%S)"
+        -l "$RESULTS_DIR/stress-${timestamp}.jtl" \
+        -j "$LOGS_DIR/stress-${timestamp}.log" \
+        -e -o "$REPORTS_DIR/stress-${timestamp}"
     
     print_info "Stress test completed"
-    print_info "Report available at: $REPORTS_DIR/stress-$(date +%Y%m%d-%H%M%S)/index.html"
+    print_info "Report available at: $REPORTS_DIR/stress-${timestamp}/index.html"
 }
 
 # Function to show usage
