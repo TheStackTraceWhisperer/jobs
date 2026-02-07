@@ -87,6 +87,7 @@
                         <button class="btn btn-sm btn-action" 
                                 th:hx-post="@{/api/jobs/{id}/requeue(id=${job.id})}"
                                 hx-swap="none"
+                                hx-on::after-request="window.location.reload()"
                                 hx-confirm="Requeue this job?"
                                 th:disabled="${job.status == T(io.github.thestacktracewhisperer.jobs.common.entity.JobStatus).PROCESSING}">
                             Requeue
@@ -94,6 +95,7 @@
                         <button class="btn btn-sm btn-action" 
                                 th:hx-post="@{/api/jobs/{id}/cancel(id=${job.id})}"
                                 hx-swap="none"
+                                hx-on::after-request="window.location.reload()"
                                 hx-confirm="Cancel this job?"
                                 th:disabled="${job.status == T(io.github.thestacktracewhisperer.jobs.common.entity.JobStatus).CANCELLED}">
                             Cancel
