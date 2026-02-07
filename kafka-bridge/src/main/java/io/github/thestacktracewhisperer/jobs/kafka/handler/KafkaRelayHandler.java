@@ -2,7 +2,6 @@ package io.github.thestacktracewhisperer.jobs.kafka.handler;
 
 import io.github.thestacktracewhisperer.jobs.shared.kafka.KafkaRelayJob;
 import io.github.thestacktracewhisperer.jobs.worker.handler.JobHandler;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.kafka.core.KafkaTemplate;

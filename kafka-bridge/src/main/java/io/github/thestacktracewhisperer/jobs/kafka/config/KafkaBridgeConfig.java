@@ -20,11 +20,11 @@ import java.util.Map;
  * Kafka configuration for the bridge components.
  * 
  * <p>This configuration provides a manual acknowledgment listener container factory
- * required by the LegacyOrderIngestor to ensure transactional safety.</p>
+ * for Kafka consumers that need transactional safety when processing messages.</p>
  * 
  * <p><b>Risk Mitigation:</b> Configures exponential backoff error handling to avoid
- * the "Retry Storm" amplification issue. This prevents the ingestor from hammering
- * the database during an outage.</p>
+ * the "Retry Storm" amplification issue. This prevents consumers from hammering
+ * external systems (e.g., databases) during an outage.</p>
  */
 @Configuration
 @EnableKafka
