@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Details</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <script th:src="@{/webjars/htmx.org/dist/htmx.min.js}"></script>
+</head>
+<body>
+    <div class="jobs-container">
+        <header class="header">
+            <h1>Job Details</h1>
+            <a th:href="@{/jobs}" class="btn btn-secondary">Back to List</a>
+        </header>
+
+        <div class="job-details">
+            <div class="detail-section">
+                <h2>Overview</h2>
+                <dl class="detail-list">
+                    <dt>ID:</dt>
+                    <dd th:text="${job.id}">uuid</dd>
+
+                    <dt>Status:</dt>
+                    <dd>
+                        <span class="status-badge" 
+                              th:classappend="${'status-' + #strings.toLowerCase(job.status)}"
+                              th:text="${job.status}">QUEUED</span>
+                    </dd>
+
+                    <dt>Queue Name:</dt>
+                    <dd th:text="${job.queueName}">DEFAULT</dd>
+
+                    <dt>Job Type:</dt>
+                    <dd th:text="${job.jobType}">com.example.Job</dd>
+
+                    <dt>Priority:</dt>
+                    <dd th:text="${job.priority}">0</dd>
+
+                    <dt>Attempts:</dt>
+                    <dd th:text="${job.attempts}">0</dd>
+
+                    <dt>Version:</dt>
+                    <dd th:text="${job.version}">0</dd>
+                </dl>
+            </div>
+
+            <div class="detail-section">
+                <h2>Timestamps</h2>
+                <dl class="detail-list">
+                    <dt>Created At:</dt>
+                    <dd th:text="${#temporals.format(job.createdAt, 'yyyy-MM-dd HH:mm:ss.SSS')}">timestamp</dd>
+
+                    <dt>Run At:</dt>
+                    <dd th:text="${#temporals.format(job.runAt, 'yyyy-MM-dd HH:mm:ss.SSS')}">timestamp</dd>
+
+                    <dt>Last Heartbeat:</dt>
+                    <dd th:text="${job.lastHeartbeat != null ? #temporals.format(job.lastHeartbeat, 'yyyy-MM-dd HH:mm:ss.SSS') : 'N/A'}">timestamp</dd>
+                </dl>
+            </div>
+
+            <div class="detail-section">
+                <h2>Context</h2>
+                <dl class="detail-list">
+                    <dt>Trace ID:</dt>
+                    <dd th:text="${job.traceId != null ? job.traceId : 'N/A'}">N/A</dd>
+
+                    <dt>Parent Job ID:</dt>
+                    <dd th:text="${job.parentJobId != null ? job.parentJobId : 'N/A'}">N/A</dd>
+                </dl>
+            </div>
+
+            <div class="detail-section">
+                <h2>Payload</h2>
+                <pre class="payload-box" th:text="${job.payload}">{"data": "value"}</pre>
+            </div>
+
+            <div class="detail-section" th:if="${job.lastError != null}">
+                <h2>Last Error</h2>
+                <pre class="error-box" th:text="${job.lastError}">Error message</pre>
+            </div>
+
+            <div class="detail-section">
+                <h2>Actions</h2>
+                <button class="btn btn-primary" 
+                        th:hx-post="@{/api/jobs/{id}/requeue(id=${job.id})}"
+                        hx-swap="none"
+                        hx-on::after-request="window.location.reload()"
+                        hx-confirm="Requeue this job?"
+                        th:disabled="${job.status == T(io.github.thestacktracewhisperer.jobs.common.entity.JobStatus).PROCESSING}">
+                    Requeue Job
+                </button>
+                <button class="btn btn-secondary" 
+                        th:hx-post="@{/api/jobs/{id}/cancel(id=${job.id})}"
+                        hx-swap="none"
+                        hx-on::after-request="window.location.reload()"
+                        hx-confirm="Cancel this job?"
+                        th:disabled="${job.status == T(io.github.thestacktracewhisperer.jobs.common.entity.JobStatus).CANCELLED}">
+                    Cancel Job
+                </button>
+                <button class="btn btn-danger" 
+                        th:hx-delete="@{/api/jobs/{id}(id=${job.id})}"
+                        hx-swap="none"
+                        th:hx-on::after-request="|window.location.href='@{/jobs}'|"
+                        hx-confirm="Delete this job permanently?">
+                    Delete Job
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

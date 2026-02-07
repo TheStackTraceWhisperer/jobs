@@ -17,6 +17,7 @@
         <module>job-platform-common</module>
         <module>job-platform-producer-spring-boot-starter</module>
         <module>job-platform-worker-spring-boot-starter</module>
+        <module>job-platform-ui-starter</module>
         <module>reference-app</module>
     </modules>
 
@@ -70,6 +71,11 @@
             <dependency>
                 <groupId>io.github.thestacktracewhisperer</groupId>
                 <artifactId>job-platform-worker-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.thestacktracewhisperer</groupId>
+                <artifactId>job-platform-ui-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
