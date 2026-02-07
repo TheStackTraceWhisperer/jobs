@@ -218,6 +218,59 @@ class MaintenanceServiceTest {
         verify(metricsService).recordZombieJobReaped("QUEUE_B");
     }
 
+    @Test
+    void testReapZombieJobsIsolatesIndividualJobFailures() {
+        // Create three zombie jobs
+        JobEntity zombie1 = createZombieJob("Job1");
+        JobEntity zombie2 = createZombieJob("Job2");
+        JobEntity zombie3 = createZombieJob("Job3");
+        List<JobEntity> zombies = Arrays.asList(zombie1, zombie2, zombie3);
+
+        when(jobRepository.findZombieJobs(eq(JobStatus.PROCESSING), any(Instant.class)))
+            .thenReturn(zombies);
+        
+        // Mock save() to throw exception for the first job only
+        when(jobRepository.save(zombie1))
+            .thenThrow(new RuntimeException("Database error for job1"));
+        when(jobRepository.save(zombie2)).thenAnswer(i -> i.getArgument(0));
+        when(jobRepository.save(zombie3)).thenAnswer(i -> i.getArgument(0));
+
+        maintenanceService.reapZombieJobs();
+
+        // Verify that save() was still called for all three jobs
+        verify(jobRepository).save(zombie1);
+        verify(jobRepository).save(zombie2);
+        verify(jobRepository).save(zombie3);
+        
+        // Note: All zombies are set to QUEUED in memory before save is called.
+        // Even though zombie1's save fails, the in-memory object was already modified.
+        // The key validation is that saves for zombie2 and zombie3 were attempted despite zombie1's failure.
+        assertEquals(JobStatus.QUEUED, zombie1.getStatus());
+        assertEquals(JobStatus.QUEUED, zombie2.getStatus());
+        assertEquals(JobStatus.QUEUED, zombie3.getStatus());
+    }
+
+    @Test
+    void testReapZombieJobsPreservesExistingErrorHistory() {
+        JobEntity zombie = createZombieJob("Job1");
+        String originalError = "NullPointerException: Failed to process task";
+        zombie.setLastError(originalError);
+        
+        when(jobRepository.findZombieJobs(eq(JobStatus.PROCESSING), any(Instant.class)))
+            .thenReturn(Collections.singletonList(zombie));
+        when(jobRepository.save(any(JobEntity.class))).thenAnswer(i -> i.getArgument(0));
+
+        maintenanceService.reapZombieJobs();
+
+        // Verify that the error message contains both the original error and the timeout message
+        String expectedError = originalError + " | Job timed out - no heartbeat update";
+        assertEquals(expectedError, zombie.getLastError());
+        assertTrue(zombie.getLastError().contains(originalError));
+        assertTrue(zombie.getLastError().contains("timed out"));
+        
+        verify(jobRepository).save(zombie);
+    }
+
     private JobEntity createZombieJob(String jobType) {
         JobEntity entity = new JobEntity("DEFAULT", jobType, "{}");
         entity.setId(UUID.randomUUID());

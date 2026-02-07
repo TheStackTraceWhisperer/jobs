@@ -60,19 +60,33 @@ public class MaintenanceService {
             log.warn("Found {} zombie jobs, resetting to QUEUED", zombies.size());
 
             for (JobEntity zombie : zombies) {
-                zombie.setStatus(JobStatus.QUEUED);
-                zombie.setLastError("Job timed out - no heartbeat update");
-                zombie.setRunAt(Instant.now());
-                jobRepository.save(zombie);
-                
-                // Record zombie reaping metric
-                metricsService.recordZombieJobReaped(zombie.getQueueName());
+                try {
+                    zombie.setStatus(JobStatus.QUEUED);
+                    
+                    // Preserve existing error history when reaping
+                    String originalError = zombie.getLastError();
+                    String timeoutMsg = "Job timed out - no heartbeat update";
+                    String newError = (originalError == null) 
+                        ? timeoutMsg 
+                        : originalError + " | " + timeoutMsg;
+                    zombie.setLastError(newError);
+                    
+                    zombie.setRunAt(Instant.now());
+                    jobRepository.save(zombie);
+                    
+                    // Record zombie reaping metric
+                    metricsService.recordZombieJobReaped(zombie.getQueueName());
 
-                log.info("Reset zombie job to QUEUED: id={}, lastHeartbeat={}", 
-                    zombie.getId(), zombie.getLastHeartbeat());
+                    log.info("Reset zombie job to QUEUED: id={}, lastHeartbeat={}", 
+                        zombie.getId(), zombie.getLastHeartbeat());
+                } catch (Exception e) {
+                    log.warn("Failed to reap zombie job {}", zombie.getId(), e);
+                    // Continue to next zombie
+                }
             }
 
         } catch (Exception e) {
+            // Catch exceptions from findZombieJobs or other pre-loop operations
             log.error("Error during zombie job reaping", e);
         } finally {
             Duration reaperDuration = Duration.between(reaperStart, Instant.now());
