@@ -137,10 +137,19 @@ class JobServiceTest {
     @Test
     void delete_shouldCallRepositoryDelete() {
         UUID id = testJob.getId();
-        when(jobRepository.existsById(id)).thenReturn(true);
 
         jobService.delete(id);
 
+        verify(jobRepository).deleteById(id);
+    }
+
+    @Test
+    void delete_whenJobNotFound_shouldNotThrowException() {
+        UUID id = UUID.randomUUID();
+
+        // Should not throw - delete is idempotent
+        assertDoesNotThrow(() -> jobService.delete(id));
+        
         verify(jobRepository).deleteById(id);
     }
 }

@@ -81,12 +81,10 @@ public class JobService {
 
     /**
      * Delete a job permanently.
+     * This operation is idempotent - deleting a non-existent job succeeds silently.
      */
     @Transactional
     public void delete(UUID id) {
-        if (!jobRepository.existsById(id)) {
-            throw new JobNotFoundException("Job not found: " + id);
-        }
         jobRepository.deleteById(id);
     }
 }
