@@ -102,7 +102,7 @@
                 <button class="btn btn-danger" 
                         th:hx-delete="@{/api/jobs/{id}(id=${job.id})}"
                         hx-swap="none"
-                        hx-on::after-request="window.location.href='/jobs'"
+                        th:hx-on::after-request="|window.location.href='@{/jobs}'|"
                         hx-confirm="Delete this job permanently?">
                     Delete Job
                 </button>
