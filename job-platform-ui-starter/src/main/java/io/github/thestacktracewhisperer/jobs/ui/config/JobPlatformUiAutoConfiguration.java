@@ -11,7 +11,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
  * Auto-configuration for Job Platform UI.
  */
 @AutoConfiguration
-@ConditionalOnProperty(name = "platform.jobs.ui.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "platform.jobs.ui.enabled", havingValue = "true", matchIfMissing = true)
 @ComponentScan(basePackages = "io.github.thestacktracewhisperer.jobs.ui")
 @EnableJpaRepositories(basePackageClasses = JobRepository.class)
 @EntityScan(basePackages = "io.github.thestacktracewhisperer.jobs.common.entity")
