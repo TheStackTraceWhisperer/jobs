@@ -86,6 +86,8 @@ sudo apt-get install jmeter
 jmeter --version
 ```
 
+**Note:** These test plans were created with JMeter 5.6.3. While they should be compatible with other 5.x versions, it's recommended to use JMeter 5.6.x or later for best results. Some visualizers in the test plans (e.g., "Response Times Over Time") are disabled by default as they require JMeter Plugins Manager. They can be enabled after installing the required plugins if desired.
+
 ### 2. Start the Job Platform
 
 Ensure the application is running before executing tests:
@@ -354,9 +356,11 @@ jobs:
           
       - name: Install JMeter
         run: |
-          wget https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.3.tgz
-          tar -xzf apache-jmeter-5.6.3.tgz
-          echo "$PWD/apache-jmeter-5.6.3/bin" >> $GITHUB_PATH
+          # Note: Update this version to match the version used in the test plans (currently 5.6.3)
+          JMETER_VERSION=5.6.3
+          wget https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz
+          tar -xzf apache-jmeter-${JMETER_VERSION}.tgz
+          echo "$PWD/apache-jmeter-${JMETER_VERSION}/bin" >> $GITHUB_PATH
           
       - name: Start Services
         run: |
