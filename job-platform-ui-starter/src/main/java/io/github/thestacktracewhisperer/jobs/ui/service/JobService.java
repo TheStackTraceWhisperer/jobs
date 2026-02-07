@@ -85,6 +85,6 @@ public class JobService {
      */
     @Transactional
     public void delete(UUID id) {
-        jobRepository.deleteById(id);
+        jobRepository.findById(id).ifPresent(jobRepository::delete);
     }
 }
