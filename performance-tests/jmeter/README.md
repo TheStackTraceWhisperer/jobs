@@ -43,23 +43,26 @@ This directory contains comprehensive JMeter test plans for the Job Platform, de
 - Ramp-up: 10 seconds
 
 ### 3. Stress Test (`stress-test.jmx`)
-**Purpose:** Tests system behavior under extreme load with progressive load increase and spike scenarios.
+**Purpose:** Tests system behavior under extreme load with progressive load increase, degraded scenarios, and spike testing.
 
 **Key Features:**
-- **Phase 1 - Baseline Load (Warm-up):** 50 threads, 2 minutes
-- **Phase 2 - Progressive Load Increase:** Ramps from 50 to 200 threads over 2 minutes, runs for 5 minutes
+- **Phase 1 - Baseline Load (Warm-up):** 50 threads, 2 minutes - health checks only
+- **Phase 2 - Progressive Load Increase:** Ramps from 50 to 200 threads over 2 minutes, runs for 5 minutes - includes job enqueueing
+- **Phase 2b - Degraded Scenario:** 10 threads continuously enqueueing failing jobs for 2 minutes to test error handling under load
 - **Phase 3 - Spike Test (Extreme Load):** Sudden spike to 500 threads for 1 minute
 - **Phase 4 - Recovery Period:** Returns to 50 threads for 2 minutes to verify system recovery
 - Continuous system health monitoring thread tracks:
   - Worker saturation
   - Queue depth
   - Error rates
+  - Failed job counts
 - Allows 503 (Service Unavailable) and error responses during extreme load
-- Validates system recovery after stress
+- Validates system recovery after stress and degradation
 
 **Default Configuration:**
 - Baseline: 50 threads
 - Peak: 200 threads
+- Degraded scenario: 10 threads (failing jobs)
 - Spike: 500 threads
 - Total duration: ~10 minutes
 
