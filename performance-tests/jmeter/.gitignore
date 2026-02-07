@@ -1,0 +1,19 @@
+# JMeter generated files and directories
+results/
+logs/
+reports/
+
+# JMeter backup files
+*.jmx~
+
+# CSV result files
+*.jtl
+*.csv
+*.log
+
+# HTML reports
+*.html
+
+# Temporary files
+*.tmp
+*.bak
