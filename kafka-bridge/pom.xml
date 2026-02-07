@@ -11,11 +11,11 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>reference-app</artifactId>
+    <artifactId>kafka-bridge</artifactId>
     <packaging>jar</packaging>
 
-    <name>Reference App</name>
-    <description>Reference implementation demonstrating the job platform</description>
+    <name>Kafka Bridge</name>
+    <description>Bi-directional transactional bridge between Kafka and the Job Platform</description>
 
     <dependencies>
         <!-- Internal Dependencies -->
@@ -35,27 +35,11 @@
             <groupId>io.github.thestacktracewhisperer</groupId>
             <artifactId>product-shared-api</artifactId>
         </dependency>
-        <dependency>
-            <groupId>io.github.thestacktracewhisperer</groupId>
-            <artifactId>kafka-bridge</artifactId>
-        </dependency>
 
         <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         
         <!-- Spring Kafka -->
@@ -64,10 +48,10 @@
             <artifactId>spring-kafka</artifactId>
         </dependency>
 
-        <!-- MSSQL Driver -->
+        <!-- Jackson for JSON -->
         <dependency>
-            <groupId>com.microsoft.sqlserver</groupId>
-            <artifactId>mssql-jdbc</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
         </dependency>
 
         <!-- Lombok -->
@@ -77,25 +61,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- H2 for testing -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Spring Cloud for @RefreshScope (Optional - uncomment to enable) -->
-        <!--
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-context</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-bootstrap</artifactId>
-        </dependency>
-        -->
-
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -103,18 +68,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>testcontainers</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>mssqlserver</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -122,16 +77,8 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <configuration>
-                    <!-- Skip coverage check for reference app -->
-                    <skip>true</skip>
-                </configuration>
             </plugin>
         </plugins>
     </build>
