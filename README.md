@@ -263,7 +263,3 @@ Integration tests use Testcontainers to spin up an MSSQL instance automatically.
 ## License
 
 This project is licensed under the Apache License 2.0.
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
