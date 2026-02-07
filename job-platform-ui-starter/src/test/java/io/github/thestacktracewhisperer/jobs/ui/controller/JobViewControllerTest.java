@@ -2,6 +2,7 @@ package io.github.thestacktracewhisperer.jobs.ui.controller;
 
 import io.github.thestacktracewhisperer.jobs.common.entity.JobEntity;
 import io.github.thestacktracewhisperer.jobs.common.entity.JobStatus;
+import io.github.thestacktracewhisperer.jobs.ui.exception.JobNotFoundException;
 import io.github.thestacktracewhisperer.jobs.ui.service.JobService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -85,6 +86,15 @@ class JobViewControllerTest {
                 .andExpect(view().name("job-details"))
                 .andExpect(model().attributeExists("job"))
                 .andExpect(model().attribute("job", testJob));
+    }
+
+    @Test
+    void jobDetails_whenJobNotFound_shouldReturn404() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(jobService.findById(id)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/jobs/{id}", id))
+                .andExpect(status().isNotFound());
     }
 
     @Configuration

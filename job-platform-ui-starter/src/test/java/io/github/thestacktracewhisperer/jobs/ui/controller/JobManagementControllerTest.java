@@ -1,5 +1,6 @@
 package io.github.thestacktracewhisperer.jobs.ui.controller;
 
+import io.github.thestacktracewhisperer.jobs.ui.exception.JobNotFoundException;
 import io.github.thestacktracewhisperer.jobs.ui.service.JobService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,8 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -37,11 +37,35 @@ class JobManagementControllerTest {
     }
 
     @Test
+    void requeue_whenJobNotFound_shouldReturn404() throws Exception {
+        UUID id = UUID.randomUUID();
+        doThrow(new JobNotFoundException("Job not found: " + id))
+                .when(jobService).requeue(id);
+
+        mockMvc.perform(post("/api/jobs/{id}/requeue", id))
+                .andExpect(status().isNotFound());
+
+        verify(jobService).requeue(id);
+    }
+
+    @Test
     void cancel_shouldCallServiceAndReturnOk() throws Exception {
         UUID id = UUID.randomUUID();
 
         mockMvc.perform(post("/api/jobs/{id}/cancel", id))
                 .andExpect(status().isOk());
+
+        verify(jobService).cancel(id);
+    }
+
+    @Test
+    void cancel_whenJobNotFound_shouldReturn404() throws Exception {
+        UUID id = UUID.randomUUID();
+        doThrow(new JobNotFoundException("Job not found: " + id))
+                .when(jobService).cancel(id);
+
+        mockMvc.perform(post("/api/jobs/{id}/cancel", id))
+                .andExpect(status().isNotFound());
 
         verify(jobService).cancel(id);
     }
