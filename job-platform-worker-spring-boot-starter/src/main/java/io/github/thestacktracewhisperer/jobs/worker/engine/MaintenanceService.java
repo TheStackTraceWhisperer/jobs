@@ -80,12 +80,13 @@ public class MaintenanceService {
                     log.info("Reset zombie job to QUEUED: id={}, lastHeartbeat={}", 
                         zombie.getId(), zombie.getLastHeartbeat());
                 } catch (Exception e) {
-                    log.warn("Failed to reap zombie job {}: {}", zombie.getId(), e.getMessage());
+                    log.warn("Failed to reap zombie job {}", zombie.getId(), e);
                     // Continue to next zombie
                 }
             }
 
         } catch (Exception e) {
+            // Catch exceptions from findZombieJobs or other pre-loop operations
             log.error("Error during zombie job reaping", e);
         } finally {
             Duration reaperDuration = Duration.between(reaperStart, Instant.now());

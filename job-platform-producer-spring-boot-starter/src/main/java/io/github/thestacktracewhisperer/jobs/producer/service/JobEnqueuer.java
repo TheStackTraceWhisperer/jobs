@@ -91,7 +91,7 @@ public class JobEnqueuer {
                 metricsService.recordJobEnqueued(jobType, queueName);
             } catch (Exception e) {
                 // Suppress observability failures to protect the business transaction
-                log.warn("Failed to record metrics for job {}: {}", saved.getId(), e.getMessage());
+                log.warn("Failed to record metrics for job {}", saved.getId(), e);
             }
             
             log.info("Enqueued job: id={}, type={}, queue={}", 

@@ -237,12 +237,15 @@ class MaintenanceServiceTest {
 
         maintenanceService.reapZombieJobs();
 
-        // Verify that save() was still called for the second and third jobs
+        // Verify that save() was still called for all three jobs
         verify(jobRepository).save(zombie1);
         verify(jobRepository).save(zombie2);
         verify(jobRepository).save(zombie3);
         
-        // Verify that successful jobs were updated
+        // Note: All zombies are set to QUEUED in memory before save is called.
+        // Even though zombie1's save fails, the in-memory object was already modified.
+        // The key validation is that saves for zombie2 and zombie3 were attempted despite zombie1's failure.
+        assertEquals(JobStatus.QUEUED, zombie1.getStatus());
         assertEquals(JobStatus.QUEUED, zombie2.getStatus());
         assertEquals(JobStatus.QUEUED, zombie3.getStatus());
     }
