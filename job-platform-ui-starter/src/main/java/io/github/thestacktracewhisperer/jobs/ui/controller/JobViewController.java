@@ -40,12 +40,16 @@ public class JobViewController {
             @RequestParam(defaultValue = "20") int size,
             Model model) {
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // Validate and clamp page and size parameters
+        int validPage = Math.max(0, page);
+        int validSize = Math.max(1, Math.min(100, size)); // Enforce max page size of 100
+
+        Pageable pageable = PageRequest.of(validPage, validSize, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<JobEntity> jobs = jobService.findJobs(status, queueName, jobType, pageable);
 
         model.addAttribute("jobs", jobs);
-        model.addAttribute("currentPage", page);
-        model.addAttribute("currentSize", size);
+        model.addAttribute("currentPage", validPage);
+        model.addAttribute("currentSize", validSize);
         model.addAttribute("totalPages", jobs.getTotalPages());
         model.addAttribute("totalElements", jobs.getTotalElements());
         model.addAttribute("selectedStatus", status);
