@@ -1,19 +1,28 @@
 package io.github.thestacktracewhisperer.jobs.kafka.config;
 
+import io.github.thestacktracewhisperer.jobs.kafka.properties.KafkaBackoffProperties;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class KafkaBridgeConfigTest {
+
+    @Mock
+    private KafkaBackoffProperties backoffProperties;
 
     @Test
     void testConsumerFactory() {
         // Arrange
-        KafkaBridgeConfig config = new KafkaBridgeConfig();
+        KafkaBridgeConfig config = new KafkaBridgeConfig(backoffProperties);
         
         // Use reflection to set the bootstrap servers field
         try {
@@ -37,7 +46,12 @@ class KafkaBridgeConfigTest {
     @Test
     void testKafkaManualAckListenerContainerFactory() {
         // Arrange
-        KafkaBridgeConfig config = new KafkaBridgeConfig();
+        when(backoffProperties.getInitialInterval()).thenReturn(1000L);
+        when(backoffProperties.getMultiplier()).thenReturn(2.0);
+        when(backoffProperties.getMaxInterval()).thenReturn(60000L);
+        when(backoffProperties.getMaxElapsedTime()).thenReturn(300000L);
+        
+        KafkaBridgeConfig config = new KafkaBridgeConfig(backoffProperties);
         
         // Use reflection to set the bootstrap servers field
         try {
@@ -61,7 +75,12 @@ class KafkaBridgeConfigTest {
     @Test
     void testKafkaManualAckListenerContainerFactory_HasErrorHandler() {
         // Arrange
-        KafkaBridgeConfig config = new KafkaBridgeConfig();
+        when(backoffProperties.getInitialInterval()).thenReturn(1000L);
+        when(backoffProperties.getMultiplier()).thenReturn(2.0);
+        when(backoffProperties.getMaxInterval()).thenReturn(60000L);
+        when(backoffProperties.getMaxElapsedTime()).thenReturn(300000L);
+        
+        KafkaBridgeConfig config = new KafkaBridgeConfig(backoffProperties);
         
         // Use reflection to set the bootstrap servers field
         try {

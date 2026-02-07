@@ -1,5 +1,7 @@
 package io.github.thestacktracewhisperer.jobs.kafka.config;
 
+import io.github.thestacktracewhisperer.jobs.kafka.properties.KafkaBackoffProperties;
+import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,7 +30,10 @@ import java.util.Map;
  */
 @Configuration
 @EnableKafka
+@RequiredArgsConstructor
 public class KafkaBridgeConfig {
+
+    private final KafkaBackoffProperties backoffProperties;
 
     @Value("${spring.kafka.bootstrap-servers:localhost:9092}")
     private String bootstrapServers;
@@ -67,10 +72,10 @@ public class KafkaBridgeConfig {
         // Configure exponential backoff error handler
         // This prevents retry storms during DB outages
         ExponentialBackOff backOff = new ExponentialBackOff();
-        backOff.setInitialInterval(1000L);  // Start with 1 second
-        backOff.setMultiplier(2.0);          // Double each time
-        backOff.setMaxInterval(60000L);      // Cap at 60 seconds
-        backOff.setMaxElapsedTime(300000L);  // Give up after 5 minutes
+        backOff.setInitialInterval(backoffProperties.getInitialInterval());
+        backOff.setMultiplier(backoffProperties.getMultiplier());
+        backOff.setMaxInterval(backoffProperties.getMaxInterval());
+        backOff.setMaxElapsedTime(backoffProperties.getMaxElapsedTime());
         
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(backOff);
         factory.setCommonErrorHandler(errorHandler);

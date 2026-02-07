@@ -1,5 +1,8 @@
 package io.github.thestacktracewhisperer.jobs.kafka.handler;
 
+import io.github.thestacktracewhisperer.jobs.kafka.exception.KafkaBrokerException;
+import io.github.thestacktracewhisperer.jobs.kafka.exception.PayloadTooLargeException;
+import io.github.thestacktracewhisperer.jobs.kafka.properties.KafkaRelayProperties;
 import io.github.thestacktracewhisperer.jobs.shared.kafka.KafkaRelayJob;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,11 +30,17 @@ class KafkaRelayHandlerTest {
     @Mock
     private KafkaTemplate<String, String> kafkaTemplate;
 
+    @Mock
+    private KafkaRelayProperties properties;
+
     private KafkaRelayHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new KafkaRelayHandler(kafkaTemplate);
+        // Use lenient stubbing since not all tests use all stubbed methods
+        lenient().when(properties.getMaxMessageSize()).thenReturn(1024 * 1024); // 1MB
+        lenient().when(properties.getSendTimeoutSeconds()).thenReturn(10);
+        handler = new KafkaRelayHandler(kafkaTemplate, properties);
     }
 
     @Test
@@ -96,7 +105,7 @@ class KafkaRelayHandlerTest {
         when(kafkaTemplate.send(any(ProducerRecord.class))).thenReturn(future);
 
         // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> handler.handle(job));
+        KafkaBrokerException exception = assertThrows(KafkaBrokerException.class, () -> handler.handle(job));
         assertTrue(exception.getMessage().contains("Kafka Broker unreachable or timed out"));
     }
 
@@ -113,7 +122,7 @@ class KafkaRelayHandlerTest {
         when(kafkaTemplate.send(any(ProducerRecord.class))).thenReturn(future);
 
         // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> handler.handle(job));
+        KafkaBrokerException exception = assertThrows(KafkaBrokerException.class, () -> handler.handle(job));
         assertTrue(exception.getMessage().contains("Kafka Broker unreachable or timed out"));
     }
 
@@ -130,7 +139,7 @@ class KafkaRelayHandlerTest {
         KafkaRelayJob job = new KafkaRelayJob(topic, key, largePayload.toString(), null);
 
         // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> handler.handle(job));
+        PayloadTooLargeException exception = assertThrows(PayloadTooLargeException.class, () -> handler.handle(job));
         assertTrue(exception.getMessage().contains("Payload size"));
         assertTrue(exception.getMessage().contains("exceeds Kafka max message size"));
         
@@ -152,8 +161,8 @@ class KafkaRelayHandlerTest {
         when(kafkaTemplate.send(any(ProducerRecord.class))).thenReturn(future);
 
         // Act & Assert
-        // The handler catches ExecutionException and throws RuntimeException
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> handler.handle(job));
+        // The handler catches ExecutionException and throws KafkaBrokerException
+        KafkaBrokerException exception = assertThrows(KafkaBrokerException.class, () -> handler.handle(job));
         assertTrue(exception.getMessage().contains("Kafka Broker unreachable or timed out"));
     }
 }
