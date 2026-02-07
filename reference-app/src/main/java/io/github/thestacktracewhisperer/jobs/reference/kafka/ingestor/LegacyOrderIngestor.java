@@ -2,6 +2,7 @@ package io.github.thestacktracewhisperer.jobs.reference.kafka.ingestor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.thestacktracewhisperer.jobs.common.entity.JobEntity;
 import io.github.thestacktracewhisperer.jobs.reference.kafka.dto.LegacyOrderEvent;
 import io.github.thestacktracewhisperer.jobs.producer.service.JobEnqueuer;
 import io.github.thestacktracewhisperer.jobs.reference.job.FulfillOrderJob;
@@ -13,6 +14,8 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.UUID;
 
@@ -71,13 +74,26 @@ public class LegacyOrderIngestor {
             );
 
             // 3. Persistence
-            jobEnqueuer.enqueue(job);
+            JobEntity savedJob = jobEnqueuer.enqueue(job);
 
-            // 4. Commit Offset
-            // If enqueue throws, this line is skipped, Kafka redelivers.
-            ack.acknowledge();
-            
-            log.info("Successfully ingested order event: orderId={}", event.getOrderId());
+            // 4. Commit Offset - ONLY after DB transaction commits
+            // Register acknowledgment to happen after transaction commit to ensure
+            // Kafka offset is only committed if the DB transaction succeeds
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        ack.acknowledge();
+                        log.info("Successfully ingested order event: orderId={}, jobId={}", 
+                            event.getOrderId(), savedJob.getId());
+                    }
+                });
+            } else {
+                // Fallback for non-transactional contexts (e.g., tests)
+                ack.acknowledge();
+                log.info("Successfully ingested order event: orderId={}, jobId={}", 
+                    event.getOrderId(), savedJob.getId());
+            }
 
         } catch (JsonProcessingException e) {
             // POISON PILL STRATEGY

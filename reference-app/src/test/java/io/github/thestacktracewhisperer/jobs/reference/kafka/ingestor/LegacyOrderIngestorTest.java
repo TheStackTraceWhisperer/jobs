@@ -2,6 +2,7 @@ package io.github.thestacktracewhisperer.jobs.reference.kafka.ingestor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.thestacktracewhisperer.jobs.common.entity.JobEntity;
 import io.github.thestacktracewhisperer.jobs.reference.kafka.dto.LegacyOrderEvent;
 import io.github.thestacktracewhisperer.jobs.reference.job.FulfillOrderJob;
 import io.github.thestacktracewhisperer.jobs.producer.service.JobEnqueuer;
@@ -52,6 +53,11 @@ class LegacyOrderIngestorTest {
         ConsumerRecord<String, String> record = new ConsumerRecord<>(
             "orders.created.v1", 0, 123L, "key", json
         );
+        
+        // Mock the JobEntity returned by enqueue
+        JobEntity mockJobEntity = new JobEntity();
+        mockJobEntity.setId(UUID.randomUUID());
+        when(jobEnqueuer.enqueue(any(FulfillOrderJob.class))).thenReturn(mockJobEntity);
 
         // Act
         ingestor.onMessage(record, acknowledgment);
@@ -115,6 +121,11 @@ class LegacyOrderIngestorTest {
         ConsumerRecord<String, String> record = new ConsumerRecord<>(
             "orders.created.v1", 0, 123L, "key", incompleteJson
         );
+        
+        // Mock the JobEntity returned by enqueue
+        JobEntity mockJobEntity = new JobEntity();
+        mockJobEntity.setId(UUID.randomUUID());
+        when(jobEnqueuer.enqueue(any(FulfillOrderJob.class))).thenReturn(mockJobEntity);
 
         // Act - This will deserialize but with null fields
         ingestor.onMessage(record, acknowledgment);

@@ -22,11 +22,11 @@ class KafkaBridgeConfigTest {
     @Test
     void testConsumerFactory() {
         // Arrange
-        KafkaBridgeConfig config = new KafkaBridgeConfig(backoffProperties);
+        KafkaBridgeAutoConfiguration config = new KafkaBridgeAutoConfiguration(backoffProperties);
         
         // Use reflection to set the bootstrap servers field
         try {
-            var field = KafkaBridgeConfig.class.getDeclaredField("bootstrapServers");
+            var field = KafkaBridgeAutoConfiguration.class.getDeclaredField("bootstrapServers");
             field.setAccessible(true);
             field.set(config, "localhost:9092");
         } catch (Exception e) {
@@ -51,11 +51,11 @@ class KafkaBridgeConfigTest {
         when(backoffProperties.getMaxInterval()).thenReturn(60000L);
         when(backoffProperties.getMaxElapsedTime()).thenReturn(300000L);
         
-        KafkaBridgeConfig config = new KafkaBridgeConfig(backoffProperties);
+        KafkaBridgeAutoConfiguration config = new KafkaBridgeAutoConfiguration(backoffProperties);
         
         // Use reflection to set the bootstrap servers field
         try {
-            var field = KafkaBridgeConfig.class.getDeclaredField("bootstrapServers");
+            var field = KafkaBridgeAutoConfiguration.class.getDeclaredField("bootstrapServers");
             field.setAccessible(true);
             field.set(config, "localhost:9092");
         } catch (Exception e) {
@@ -80,11 +80,11 @@ class KafkaBridgeConfigTest {
         when(backoffProperties.getMaxInterval()).thenReturn(60000L);
         when(backoffProperties.getMaxElapsedTime()).thenReturn(300000L);
         
-        KafkaBridgeConfig config = new KafkaBridgeConfig(backoffProperties);
+        KafkaBridgeAutoConfiguration config = new KafkaBridgeAutoConfiguration(backoffProperties);
         
         // Use reflection to set the bootstrap servers field
         try {
-            var field = KafkaBridgeConfig.class.getDeclaredField("bootstrapServers");
+            var field = KafkaBridgeAutoConfiguration.class.getDeclaredField("bootstrapServers");
             field.setAccessible(true);
             field.set(config, "localhost:9092");
         } catch (Exception e) {
