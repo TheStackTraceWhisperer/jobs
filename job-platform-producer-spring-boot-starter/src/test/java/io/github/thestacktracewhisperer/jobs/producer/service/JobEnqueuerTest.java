@@ -272,4 +272,26 @@ class JobEnqueuerTest {
         verify(metricsService).recordEnqueueTime(eq(TestJob.class.getName()), any());
         verify(metricsService).recordJobEnqueued(TestJob.class.getName(), "DEFAULT");
     }
+
+    @Test
+    void testEnqueueSucceedsWhenMetricsServiceFails() throws Exception {
+        TestJob job = new TestJob("test");
+        String payload = "{}";
+        JobEntity savedEntity = new JobEntity("DEFAULT", TestJob.class.getName(), payload);
+        savedEntity.setId(UUID.randomUUID());
+
+        when(objectMapper.writeValueAsString(job)).thenReturn(payload);
+        when(jobRepository.save(any(JobEntity.class))).thenReturn(savedEntity);
+        
+        // Mock metricsService to throw a RuntimeException
+        doThrow(new RuntimeException("Metrics service is down"))
+            .when(metricsService).recordEnqueueTime(any(), any());
+
+        // Assert that enqueue() still returns a saved JobEntity and does not throw
+        JobEntity result = assertDoesNotThrow(() -> jobEnqueuer.enqueue(job));
+        
+        assertNotNull(result);
+        assertEquals(savedEntity.getId(), result.getId());
+        verify(jobRepository).save(any(JobEntity.class));
+    }
 }

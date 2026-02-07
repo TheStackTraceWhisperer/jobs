@@ -84,10 +84,15 @@ public class JobEnqueuer {
             // Persist and return
             JobEntity saved = jobRepository.save(entity);
             
-            // Record metrics
-            Duration enqueueDuration = Duration.between(enqueueStart, Instant.now());
-            metricsService.recordEnqueueTime(jobType, enqueueDuration);
-            metricsService.recordJobEnqueued(jobType, queueName);
+            // Record metrics - wrap in try-catch to prevent transaction rollback on observability failures
+            try {
+                Duration enqueueDuration = Duration.between(enqueueStart, Instant.now());
+                metricsService.recordEnqueueTime(jobType, enqueueDuration);
+                metricsService.recordJobEnqueued(jobType, queueName);
+            } catch (Exception e) {
+                // Suppress observability failures to protect the business transaction
+                log.warn("Failed to record metrics for job {}: {}", saved.getId(), e.getMessage());
+            }
             
             log.info("Enqueued job: id={}, type={}, queue={}", 
                 saved.getId(), jobType, queueName);
