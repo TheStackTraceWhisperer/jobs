@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Platform - Jobs</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Job Platform</h1>
+        </header>
+
+        <div class="filters">
+            <form method="get" action="/jobs" class="filter-form">
+                <div class="filter-group">
+                    <label for="status">Status:</label>
+                    <select id="status" name="status" class="filter-select">
+                        <option value="">All</option>
+                        <option th:each="s : ${statuses}" 
+                                th:value="${s}" 
+                                th:text="${s}"
+                                th:selected="${s == selectedStatus}"></option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="queueName">Queue:</label>
+                    <input type="text" id="queueName" name="queueName" 
+                           th:value="${selectedQueueName}" 
+                           placeholder="e.g., DEFAULT"
+                           class="filter-input">
+                </div>
+
+                <div class="filter-group">
+                    <label for="jobType">Job Type:</label>
+                    <input type="text" id="jobType" name="jobType" 
+                           th:value="${selectedJobType}" 
+                           placeholder="Search job type"
+                           class="filter-input">
+                </div>
+
+                <button type="submit" class="btn btn-primary">Filter</button>
+                <a href="/jobs" class="btn btn-secondary">Clear</a>
+            </form>
+        </div>
+
+        <div class="stats">
+            <p>Showing <span th:text="${jobs.numberOfElements}">0</span> of 
+               <span th:text="${totalElements}">0</span> jobs</p>
+        </div>
+
+        <table class="jobs-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Status</th>
+                    <th>Queue</th>
+                    <th>Job Type</th>
+                    <th>Created At</th>
+                    <th>Run At</th>
+                    <th>Attempts</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="job : ${jobs.content}" th:id="'job-' + ${job.id}">
+                    <td>
+                        <a th:href="@{/jobs/{id}(id=${job.id})}" 
+                           class="job-link"
+                           th:text="${#strings.substring(job.id.toString(), 0, 8)}">12345678</a>
+                    </td>
+                    <td>
+                        <span class="status-badge" 
+                              th:classappend="${'status-' + #strings.toLowerCase(job.status)}"
+                              th:text="${job.status}">QUEUED</span>
+                    </td>
+                    <td th:text="${job.queueName}">DEFAULT</td>
+                    <td th:text="${job.jobType}">JobType</td>
+                    <td th:text="${#temporals.format(job.createdAt, 'yyyy-MM-dd HH:mm:ss')}">2024-01-01 12:00:00</td>
+                    <td th:text="${#temporals.format(job.runAt, 'yyyy-MM-dd HH:mm:ss')}">2024-01-01 12:00:00</td>
+                    <td th:text="${job.attempts}">0</td>
+                    <td>
+                        <button class="btn btn-sm btn-action" 
+                                th:hx-post="@{/api/jobs/{id}/requeue(id=${job.id})}"
+                                hx-swap="none"
+                                hx-confirm="Requeue this job?"
+                                th:disabled="${job.status == T(io.github.thestacktracewhisperer.jobs.common.entity.JobStatus).PROCESSING}">
+                            Requeue
+                        </button>
+                        <button class="btn btn-sm btn-action" 
+                                th:hx-post="@{/api/jobs/{id}/cancel(id=${job.id})}"
+                                hx-swap="none"
+                                hx-confirm="Cancel this job?"
+                                th:disabled="${job.status == T(io.github.thestacktracewhisperer.jobs.common.entity.JobStatus).CANCELLED}">
+                            Cancel
+                        </button>
+                        <button class="btn btn-sm btn-danger" 
+                                th:hx-delete="@{/api/jobs/{id}(id=${job.id})}"
+                                hx-swap="outerHTML"
+                                th:hx-target="'#job-' + ${job.id}"
+                                hx-confirm="Delete this job permanently?">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+                <tr th:if="${jobs.empty}">
+                    <td colspan="8" class="no-data">No jobs found</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="pagination" th:if="${totalPages > 1}">
+            <a th:if="${currentPage > 0}" 
+               th:href="@{/jobs(page=${currentPage - 1}, size=20, status=${selectedStatus}, queueName=${selectedQueueName}, jobType=${selectedJobType})}"
+               class="btn btn-secondary">Previous</a>
+            
+            <span class="page-info">
+                Page <span th:text="${currentPage + 1}">1</span> of <span th:text="${totalPages}">1</span>
+            </span>
+            
+            <a th:if="${currentPage + 1 < totalPages}" 
+               th:href="@{/jobs(page=${currentPage + 1}, size=20, status=${selectedStatus}, queueName=${selectedQueueName}, jobType=${selectedJobType})}"
+               class="btn btn-secondary">Next</a>
+        </div>
+    </div>
+</body>
+</html>

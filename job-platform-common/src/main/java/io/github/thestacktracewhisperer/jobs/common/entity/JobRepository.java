@@ -1,6 +1,7 @@
 package io.github.thestacktracewhisperer.jobs.common.entity;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,7 +15,7 @@ import java.util.UUID;
  * Repository interface for JobEntity persistence.
  */
 @Repository
-public interface JobRepository extends JpaRepository<JobEntity, UUID> {
+public interface JobRepository extends JpaRepository<JobEntity, UUID>, JpaSpecificationExecutor<JobEntity> {
 
     /**
      * Find jobs ready for processing with pessimistic locking.
