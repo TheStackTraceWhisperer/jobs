@@ -16,6 +16,12 @@ PORT="${PORT:-8080}"
 RESULTS_DIR="./results"
 LOGS_DIR="./logs"
 REPORTS_DIR="./reports"
+NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
+
+# Detect if running in non-interactive mode (CI)
+if [[ ! -t 0 ]] || [[ -n "${CI}" ]]; then
+    NON_INTERACTIVE=true
+fi
 
 # Create directories if they don't exist
 mkdir -p "$RESULTS_DIR" "$LOGS_DIR" "$REPORTS_DIR"
@@ -49,11 +55,17 @@ check_jmeter() {
 # Function to check if application is running
 check_application() {
     print_info "Checking if application is running at http://${HOST}:${PORT}"
-    if curl -s -f "http://${HOST}:${PORT}/actuator/health" > /dev/null; then
+    if curl -s -f --connect-timeout 5 --max-time 10 "http://${HOST}:${PORT}/actuator/health" > /dev/null; then
         print_info "Application is running and healthy"
     else
         print_warning "Application is not reachable at http://${HOST}:${PORT}"
         print_warning "Please start the application before running tests"
+        
+        if [[ "$NON_INTERACTIVE" == "true" ]]; then
+            print_error "Running in non-interactive mode. Exiting."
+            exit 1
+        fi
+        
         read -p "Continue anyway? (y/n) " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -71,6 +83,7 @@ run_throughput_test() {
     print_info "Running Throughput Test (threads=$threads, duration=${duration}s)"
     
     jmeter -n -t throughput-test.jmx \
+        -q jmeter.properties \
         -Jhost="$HOST" \
         -Jport="$PORT" \
         -Jthreads="$threads" \
@@ -92,6 +105,7 @@ run_latency_test() {
     print_info "Running Latency Test (threads=$threads, loops=$loops)"
     
     jmeter -n -t latency-test.jmx \
+        -q jmeter.properties \
         -Jhost="$HOST" \
         -Jport="$PORT" \
         -Jthreads="$threads" \
@@ -114,6 +128,7 @@ run_stress_test() {
     print_info "Running Stress Test (baseline=$baseline, peak=$peak, spike=$spike)"
     
     jmeter -n -t stress-test.jmx \
+        -q jmeter.properties \
         -Jhost="$HOST" \
         -Jport="$PORT" \
         -Jbaseline_threads="$baseline" \
@@ -175,10 +190,25 @@ main() {
     while [[ $# -gt 0 ]]; do
         case $1 in
             -h|--host)
+                if [[ -z "${2:-}" ]] || [[ "$2" == -* ]]; then
+                    print_error "Option --host requires a non-empty host value"
+                    show_usage
+                    exit 1
+                fi
                 HOST="$2"
                 shift 2
                 ;;
             -p|--port)
+                if [[ -z "${2:-}" ]] || [[ "$2" == -* ]]; then
+                    print_error "Option --port requires a non-empty port value"
+                    show_usage
+                    exit 1
+                fi
+                if ! [[ "$2" =~ ^[0-9]+$ ]]; then
+                    print_error "Invalid port: $2. Port must be a numeric value."
+                    show_usage
+                    exit 1
+                fi
                 PORT="$2"
                 shift 2
                 ;;
@@ -191,7 +221,9 @@ main() {
                 shift
                 ;;
             *)
-                shift
+                print_error "Unknown option or argument: $1"
+                show_usage
+                exit 1
                 ;;
         esac
     done

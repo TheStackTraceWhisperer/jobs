@@ -5,17 +5,19 @@ This directory contains comprehensive JMeter test plans for the Job Platform, de
 ## Test Plans Overview
 
 ### 1. Throughput Test (`throughput-test.jmx`)
-**Purpose:** Measures the system's ability to handle sustained load and job processing throughput.
+**Purpose:** Measures the system's job enqueueing throughput and processing drain rate using no-op jobs.
 
 **Key Features:**
+- Enqueues no-op jobs via REST API (`POST /api/perf-test/enqueue-noop`)
+- No-op jobs complete immediately, measuring pure system overhead
 - Sustained load generation over configurable duration (default: 5 minutes)
-- Concurrent job enqueueing simulation
 - Real-time metrics collection from Prometheus endpoint
 - Extracts and monitors:
-  - Queue depth
+  - Queue depth (measures backlog)
   - Active workers
-  - Jobs enqueued count
-- Results exported to CSV for analysis
+  - Jobs enqueued and completed counts
+  - Drain rate (jobs processed per second)
+- Results exported for analysis
 
 **Default Configuration:**
 - Threads: 50 concurrent users
@@ -23,17 +25,17 @@ This directory contains comprehensive JMeter test plans for the Job Platform, de
 - Ramp-up: 30 seconds
 
 ### 2. Latency Test (`latency-test.jmx`)
-**Purpose:** Measures API response times and job processing latency with detailed percentile analysis.
+**Purpose:** Measures API response times with detailed analysis.
 
 **Key Features:**
 - Multiple endpoint testing (health, metrics, prometheus)
 - Response time measurement and analysis
-- P95 and P99 latency extraction from job metrics
+- Aggregated latency metrics extraction (sum/count) for external percentile calculations
 - Gaussian random think time for realistic user behavior
 - Detailed latency breakdown:
   - API endpoint response times
-  - Job execution times (from metrics)
-  - Queue wait times (from metrics)
+  - Job execution time aggregates (from metrics)
+  - Queue wait time aggregates (from metrics)
 
 **Default Configuration:**
 - Threads: 25 concurrent users
@@ -60,6 +62,29 @@ This directory contains comprehensive JMeter test plans for the Job Platform, de
 - Peak: 200 threads
 - Spike: 500 threads
 - Total duration: ~10 minutes
+
+## Performance Test API Endpoints
+
+The reference application includes REST endpoints specifically for performance testing:
+
+### Available Endpoints
+
+**`POST /api/perf-test/enqueue-noop`**
+- Enqueues a single no-op job that completes immediately
+- Returns: `{"jobId": "<uuid>", "status": "ENQUEUED"}`
+- Response Code: 202 Accepted
+
+**`POST /api/perf-test/enqueue-noop-batch?count=<n>`**
+- Enqueues multiple no-op jobs in a single request (max 1000)
+- Returns: `{"count": <n>, "status": "ENQUEUED"}`
+- Response Code: 202 Accepted
+
+**`POST /api/perf-test/enqueue-failing-job`**
+- Enqueues a job that will intentionally fail (for degraded scenario testing)
+- Returns: `{"jobId": "<uuid>", "status": "ENQUEUED", "willFail": "true"}`
+- Response Code: 202 Accepted
+
+These endpoints are only available when running with the `api` profile.
 
 ## Prerequisites
 
